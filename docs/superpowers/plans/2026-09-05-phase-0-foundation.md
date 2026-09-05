@@ -1071,10 +1071,12 @@ Drizzle 0.45 expects the table extras callback to return an **array**, not an ob
 The singleton is stashed on `globalThis` in non-production (review §4.4). A plain module-level variable is re-created every time Next re-evaluates the module during hot reload, so each save leaks one connection; Postgres' default `max_connections` is 100, and you hit it after an afternoon of editing.
 
 ```ts
+import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { coreEnv } from '../env'
 import * as schema from './schema'
+import { place } from './schema'
 
 export type Database = ReturnType<typeof createDb>
 
@@ -1098,6 +1100,20 @@ export function db(): Database {
   }
   globalForDb.__tripiDb ??= createDb()
   return globalForDb.__tripiDb
+}
+
+/**
+ * Row count of the place cache.
+ *
+ * Lives here rather than in a tRPC router so that `drizzle-orm` and the `sql`
+ * template stay inside packages/shared/src/db — the boundary says only this
+ * directory contains SQL. A router that imports `sql` directly also forces
+ * `drizzle-orm` into apps/web's dependencies, where it does not belong.
+ */
+export async function countPlaces(database: Database): Promise<number> {
+  const rows = await database.select({ count: sql<number>`count(*)::int` }).from(place)
+  // rows.at(0) rather than destructuring because noUncheckedIndexedAccess is on.
+  return rows.at(0)?.count ?? 0
 }
 
 export { schema }
@@ -1476,8 +1492,7 @@ export const createCallerFactory = t.createCallerFactory
 The `down` branch is now reachable (M2). In the reviewed draft it could not execute — `count(*)` always returns a row, and a real outage throws before the check, so the RSC page crashed instead of rendering `down`. A handler that looks like it handles failure but does not is worse than one that admits it doesn't.
 
 ```ts
-import { sql } from 'drizzle-orm'
-import { place } from '@tripi/shared/db/schema'
+import { countPlaces } from '@tripi/shared/db'
 import { publicProcedure, router } from '../init'
 
 export const healthRouter = router({
@@ -1488,11 +1503,7 @@ export const healthRouter = router({
   check: publicProcedure.query(async ({ ctx }) => {
     const checkedAt = new Date()
     try {
-      // Query builder rather than raw execute() so the row type is inferred
-      // rather than asserted. A successful count proves reachability.
-      const rows = await ctx.db.select({ count: sql<number>`count(*)::int` }).from(place)
-      // rows.at(0) rather than destructuring because noUncheckedIndexedAccess is on.
-      return { database: 'up' as const, placeCount: rows.at(0)?.count ?? 0, checkedAt }
+      return { database: 'up' as const, placeCount: await countPlaces(ctx.db), checkedAt }
     } catch {
       // Reached when Postgres is unreachable or the migration has not run.
       // The page renders `database: down` instead of a 500.
@@ -1501,6 +1512,8 @@ export const healthRouter = router({
   }),
 })
 ```
+
+> The query itself lives in `packages/shared/src/db/client.ts` as `countPlaces`, not here. Writing `import { sql } from 'drizzle-orm'` in this file **fails to resolve** under pnpm's strict layout — `drizzle-orm` is a dependency of `packages/shared`, not of `apps/web` — and the fix is *not* to add it to `apps/web`. The boundary table says only `packages/shared/src/db/` contains SQL; a router reaching for the `sql` template is that boundary leaking, and pnpm caught it. Found during execution: `Module not found: Can't resolve 'drizzle-orm'`.
 
 `checkedAt` is a `Date` on purpose — it proves superjson is transporting non-JSON types correctly.
 

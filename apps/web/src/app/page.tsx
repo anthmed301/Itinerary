@@ -1,8 +1,23 @@
-export default function HomePage() {
+import { serverApi } from '@/server/trpc/root'
+
+export const dynamic = 'force-dynamic'
+
+export default async function HomePage() {
+  const api = await serverApi()
+  const health = await api.health.check()
+
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-10">
-      <h1 className="text-3xl font-bold">Tripi</h1>
-      <p className="text-neutral-600 dark:text-neutral-400">Phase 0 foundation.</p>
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 p-10">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold">Tripi</h1>
+        <p className="text-sm text-neutral-500">Phase 0 foundation</p>
+      </header>
+
+      <section className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+        <h2 className="mb-2 font-semibold">Server: tRPC to Postgres</h2>
+        <p data-testid="db-status">database: {health.database}</p>
+        <p data-testid="place-count">places cached: {health.placeCount}</p>
+      </section>
     </main>
   )
 }

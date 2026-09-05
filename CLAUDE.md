@@ -1,65 +1,44 @@
-# CLAUDE.md
+# Tripi
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+Trip-planning web app. Replaces Google-Sheets planning with a focused, AI-aware document. Real-time collaborative; social Explore; trip-mode that activates when travel starts.
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+## Read first
+- `PRD.md` — product source of truth: problem, requirements, phases, stage gates, open decisions, decision log. (`PLAN.md` is retired.)
+- `docs/prd-review-2026-09-05.md` — review findings + the docs/ consistency backlog; read before editing any `docs/` file.
+- `docs/plan-review-rubric.md` — the gate every phase plan passes before execution. Reviews live at `docs/plan-review-<phase>-<date>.md` (Phase 0: `docs/plan-review-phase-0-2026-09-05.md`).
+- `docs/architecture.md` — monorepo + AWS topology.
+- `docs/data-model.md` — Drizzle schema + LexoRank.
+- `docs/api.md` — tRPC routers.
+- `docs/realtime-collab.md` — Yjs + Hocuspocus.
+- `docs/ai-integration.md` — Gemini + Tavily prompts.
+- `docs/trip-mode.md` — live trip view spec.
+- `docs/design-system.md` — three brand directions, tokens, motion, DnD spec.
+- `docs/security.md` — auth + authz + secrets + privacy.
+- `docs/ops.md` — local dev, CI/CD, deploy, observability, costs.
+- `docs/competitive-analysis.md` — market gaps and positioning.
 
-## 1. Think Before Coding
+## Working agreements (project-specific)
+- v1 is **web-only**. iOS is post-v1.
+- Auth is **Better Auth, email + password only** for v1. No OAuth, no magic link.
+- Realtime collab is **self-hosted Yjs + Hocuspocus on AWS**. Don't propose Liveblocks/PartyKit.
+- DB during POC is **local Docker Postgres**. Managed RDS at launch.
+- AI is the **current free-tier Gemini Flash-class model** during POC (1.5 Flash is retired; 2.5 Flash retires 2026-10-16). Model id lives in config, re-verified at Phase 5.
+- **Yjs is the only write path for trip content** (meta/days/activities). tRPC never edits those rows.
+- Viewer role at the realtime layer = Hocuspocus `connection.readOnly`, not a persistence-side skip.
+- Days are positional; dates derive from `trip.startDate + index`. Trips may be undated.
+- All AI place suggestions must round-trip through Foursquare for verification.
+- All trip-scoped DB queries join through `trip_member` for authorization.
+- Drag-and-drop in the trip view goes through Yjs in real-time, not tRPC.
+- Trip-mode in v1 = timeline + check-ins + opt-in shared location. **No group chat.**
+- Privacy: 3 states (private / unlisted / public). Private default.
+- Roles: owner / editor / viewer.
+- Forks of public trips are allowed and credit the original.
+- Monetization is deferred to v2; entitlement scaffolding lives on `trip.entitlements` JSONB.
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+## Working agreements (process)
+- A phase plan is executed only after a review against `docs/plan-review-rubric.md` with no row scored 1.
+- Plans probe, never assert: any "X does Y" claim about a framework or CLI carries a command with expected output, or a citation that was opened.
+- `pnpm build` and every service's `start` script run locally and in CI from Phase 0 onward; dev-only green does not count.
+- Machine state (Node version, daemons, ports) lives in `pnpm doctor`, never in a plan.
+- Boundaries are enforced by tooling (subpath exports, Biome restricted imports), not prose.
+- PRD deviations are decision-log rows in `PRD.md` §10; `docs/` deviations go to the plan's deviations table and the backlog in `docs/prd-review-2026-09-05.md` §3.

@@ -373,6 +373,8 @@ allowBuilds:
 
 - [ ] **Step 6: Write `biome.json`**
 
+`files.includes` excludes `packages/shared/migrations`, which drizzle-kit generates (Task 4). Biome reformats its `meta/*.json` files; `db:generate` writes them back unformatted; CI then fails on a file no human touched. Never lint generated output. Note the pattern has **no trailing `/**`** — since Biome 2.2 that form is wrong, and Biome lints its own config to tell you so.
+
 The `linter.rules.style.noRestrictedImports` block plus the `overrides` array is the **server/client boundary** (review §3.2). Without it, a `'use client'` component can import `@tripi/shared/db`, drag `postgres` and `drizzle-orm/postgres-js` into the browser bundle, and fail the Turbopack build on `net`/`tls` resolution — with a stack trace that points at the bundler rather than at the import.
 
 ```json
@@ -384,7 +386,8 @@ The `linter.rules.style.noRestrictedImports` block plus the `overrides` array is
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": true
+    "ignoreUnknown": true,
+    "includes": ["**", "!packages/shared/migrations"]
   },
   "formatter": {
     "enabled": true,

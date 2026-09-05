@@ -134,7 +134,7 @@ Same 9 phases as before; each phase's exit criteria (in `docs/` and the original
 
 | Phase | Goal |
 |---|---|
-| 0 — Foundation | Monorepo, Docker, CI, "hello world" deployed to AWS |
+| 0 — Foundation | Monorepo, Docker, CI, vertical slice green from a **production build** (browser → tRPC → Postgres, and two-tab Yjs sync) — AWS deploy moved to Stage 2, see §10 (2026-09-05) — **done 2026-09-05** |
 | 1 — Auth + Profile | Sign up, log in, edit profile |
 | 2 — Trips/Days/Activities/Ideas | Full CRUD + drag-and-drop + ideas pool + place attachment |
 | 3 — Realtime Collab | Multi-user live editing via Yjs + Hocuspocus |
@@ -224,3 +224,5 @@ Things we *want*, deliberately not now. Unlike §5 (hard exclusions with a state
 | 2026-09-05 | Single owner per trip + ownership transfer | API and data model disagreed on multi-owner; single owner is what `trip.ownerId` already models. |
 | 2026-09-05 | AI model id is config, not a decision; Foursquare cache limited to 24h | Gemini 1.5 Flash is retired; Foursquare terms forbid indefinite caching of place facts. Review §2.3–2.4. |
 | 2026-09-05 | Added §7b stage gates | Wanted explicit, checklist-style triggers for local → cloud → trusted users → public, separate from the feature phases. |
+| 2026-09-05 | Phase 0 no longer includes an AWS deploy; cloud entry is Stage 2 per §7b | Avoids building deploy plumbing before there is anything to deploy. Phase 0 instead proves the production path locally: `pnpm build` and every service's `start` script run in CI from this phase onward, and the e2e suite runs against the built artefacts rather than dev servers. |
+| 2026-09-05 | Local Postgres is on host port **5433**, not 5432 | A Homebrew `postgresql@17` service (database `album_app`) owns 5432 on the dev machine and auto-starts at login. Remapping leaves that project working and cannot re-collide; stopping it would break an unrelated app every reboot. CI uses 5433 too, so `DATABASE_URL` is byte-identical in both environments. |

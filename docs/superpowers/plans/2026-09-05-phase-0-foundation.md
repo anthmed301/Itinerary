@@ -20,7 +20,7 @@ Where each review finding landed, and what changed about it.
 
 | Review § | Finding | Applied in |
 |---|---|---|
-| §3.1 | Next never reads root `.env.local` | Task 2 Step 3 + Task 5 Step 2 (symlink), Task 1 Step 8 (doctor check), Task 9 Step 6 (no silent fallback), Task 12 (README) |
+| §3.1 | Next never reads root `.env.local` | Task 2 Step 3 + Task 5 Step 2 (symlink), Task 1 Step 8 (preflight check), Task 9 Step 6 (no silent fallback), Task 12 (README) |
 | §3.2 | Client components pull the Postgres driver into the browser bundle | Task 1 Step 6 (Biome `noRestrictedImports`), Task 3 Step 1 (exports map), Task 4 Step 4 (barrel stays browser-safe) |
 | §3.3 | Realtime production path is broken and never exercised | Task 8 Steps 1–3 (tsdown), Task 10 Step 1 (e2e against `pnpm start` in CI), Task 11 Step 5 (CI build), Definition of done |
 | §4.1 | Collab test races the initial sync | Task 9 Step 6/7 (`synced` state), Task 10 Step 4 |
@@ -29,7 +29,7 @@ Where each review finding landed, and what changed about it.
 | §4.4 | Config leaks (duplicate secret, silent default, one schema for two services, dev-reload pool leak) | Task 2 Step 3, Task 3 Step 5, Task 4 Steps 2–3 |
 | §4.5 | Unpinned Docker images, MinIO frozen | Task 2 Step 1, deviations table |
 | §4.6 | PRD goal cell edited instead of decided | Task 12 Steps 2–3 |
-| §4.7 | Task 0 encodes the machine; commits a retired file | Task 0 (rewritten), Task 1 Step 8 (`doctor.mjs` moved here from Task 11) |
+| §4.7 | Task 0 encodes the machine; commits a retired file | Task 0 (rewritten), Task 1 Step 8 (`preflight.mjs` moved here from Task 11) |
 | §4.8 | Stub auth has no production guard | Task 8 Step 3 |
 | M1–M12 | Medium/low | tsconfig includes + `next typegen` (Task 5), health `try/catch` (Task 6), CI `pnpm/action-setup` (Task 11), lefthook filter (Task 11), `doublePrecision` (Task 4), `pino` removed from web (Task 5), deviations rows (Task 12), LWW comment (Task 9), `declaration: false` (Task 1), `next-env.d.ts` (Task 1), CI concurrency (Task 11), Task 6/9 stubs merged (Tasks 6–9) |
 
@@ -39,7 +39,7 @@ Three of the review's claims were re-probed on 2026-09-05 while applying it. Pro
 
 1. **§3.3's tsdown command does not work.** `tsdown … --no-external @tripi/shared` — that flag does not exist in tsdown. The nearest CLI flag, `--deps.always-bundle`, is accepted without error and **silently does nothing**: the build succeeds, `@tripi/shared` stays external, and the artefact crashes with the exact `ERR_MODULE_NOT_FOUND` the patch was meant to fix. Only the config-file form works. This plan uses `tsdown.config.ts` with `deps: { alwaysBundle: ['@tripi/shared'] }` (probe P3).
 2. **§3.3's tsdown version violates §4.3's own policy.** `tsdown@0.23.0` was published 2026-09-03 — two days old, zero patches. `0.22.14` (2026-07-23, six weeks old) is what the policy in §4.3 selects. Pinned to `0.22.14`.
-3. **§4.7's premise is half wrong.** It says Task 0's Node claim is stale because 24.20.0 is installed. 24.20.0 *is* installed under nvm, but the **active** `node` is still v23.6.0 from Homebrew and **pnpm is not installed at all**. Task 0 still has real work; it just no longer asserts machine state in prose. The check moves to `pnpm doctor`, which moves from Task 11 to Task 1 so it exists before anything needs it.
+3. **§4.7's premise is half wrong.** It says Task 0's Node claim is stale because 24.20.0 is installed. 24.20.0 *is* installed under nvm, but the **active** `node` is still v23.6.0 from Homebrew and **pnpm is not installed at all**. Task 0 still has real work; it just no longer asserts machine state in prose. The check moves to `pnpm preflight`, which moves from Task 11 to Task 1 so it exists before anything needs it.
 
 §3.1, §3.2, M1 and §4.5 were each independently confirmed (probes P1, P2, P4, P5).
 
@@ -106,7 +106,7 @@ Itinerary/                          (repo root; dir rename to tripi deferred)
   .env.example                      canonical env contract
   .env.local                        gitignored, created by setup
   docker-compose.yml                postgres + minio + mailpit, pinned tags
-  scripts/doctor.mjs                preflight checks (Task 1)
+  scripts/preflight.mjs             preflight checks (Task 1)
   .github/workflows/ci.yml          single workflow
 
   packages/shared/                  the contract both services import
@@ -179,7 +179,7 @@ Note on `server-only`: do **not** add the `server-only` package inside `packages
 
 Not code — environment. Do this first or every later task fails confusingly.
 
-This task activates a toolchain; it does **not** describe your machine. Anything that inspects the machine belongs in `pnpm doctor` (Task 1 Step 8).
+This task activates a toolchain; it does **not** describe your machine. Anything that inspects the machine belongs in `pnpm preflight` (Task 1 Step 8).
 
 **Files:** delete `PLAN.md`
 
@@ -248,7 +248,7 @@ A worktree is unnecessary here — the repo contains only documentation, so ther
 ## Task 1: Repo skeleton and toolchain
 
 **Files:**
-- Create: `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, `biome.json`, `.nvmrc`, `.gitignore`, `scripts/doctor.mjs`
+- Create: `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, `biome.json`, `.nvmrc`, `.gitignore`, `scripts/preflight.mjs`
 
 - [ ] **Step 1: Write `.nvmrc`**
 
@@ -263,7 +263,15 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'services/*'
+
+# pnpm 11 requires explicit approval for dependency install scripts.
+# lefthook's postinstall downloads its platform binary; without this the
+# `lefthook` command does not exist and the pre-commit hook cannot install.
+allowBuilds:
+  lefthook: true
 ```
+
+> `allowBuilds` is a pnpm 11 requirement, not an optional hardening step. The first `pnpm install` fails with `ERR_PNPM_IGNORED_BUILDS`, appends `lefthook: set this to true or false` to this file, and leaves lefthook's binary uninstalled. Writing it up front skips that round trip.
 
 - [ ] **Step 3: Write root `package.json`**
 
@@ -286,7 +294,7 @@ packages:
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "doctor": "node scripts/doctor.mjs",
+    "preflight": "node scripts/preflight.mjs",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && pnpm db:up && pnpm db:migrate",
@@ -381,10 +389,16 @@ The `linter.rules.style.noRestrictedImports` block plus the `overrides` array is
     "indentWidth": 2,
     "lineWidth": 100
   },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "asNeeded"
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "noRestrictedImports": {
           "level": "error",
@@ -440,9 +454,11 @@ apps/web/next-env.d.ts
 .DS_Store
 ```
 
-- [ ] **Step 8: Write `scripts/doctor.mjs`**
+- [ ] **Step 8: Write `scripts/preflight.mjs`**
 
-Moved here from Task 11 (review §4.7) so that machine state has a home from the first task onward. Plans describe the target; `doctor` describes the machine.
+Moved here from Task 11 (review §4.7) so that machine state has a home from the first task onward. Plans describe the target; `preflight` describes the machine.
+
+> **Why `preflight` and not `doctor`.** pnpm 11 ships a **built-in `pnpm doctor`** command, and a built-in wins over a same-named `package.json` script. A `"doctor"` script therefore looks installed and never runs: `pnpm doctor` silently prints pnpm's own registry/store diagnostics, exits 0, and every check in this file is skipped. Only `pnpm run doctor` would reach it. Found during execution on 2026-09-05 — the first `pnpm doctor` run returned "All checks passed" while `.env.local` did not exist. Do not rename this back.
 
 The `apps/web/.env.local` check uses `existsSync`, which **follows symlinks** — so it fails on a dangling link, which is exactly the failure mode §3.1 produces. It is skipped until `apps/web` exists, so this script is useful from Task 1 through Phase 9.
 
@@ -519,19 +535,46 @@ Expected: `Version 7.0.2`, a Biome version line reading `2.5.12`, and `2.10.12`.
 
 > **If `tsc --version` fails or behaves oddly:** TypeScript 7 is the new Go-based compiler and is the newest thing in this stack. Fall back with `pnpm add -Dw typescript@6` at the root and re-run. Nothing else in the plan changes. Record the fallback in `CLAUDE.md` and add a deviations row.
 
-- [ ] **Step 10: Run the doctor**
+- [ ] **Step 10: Run the preflight check**
 
 ```bash
-pnpm doctor
+pnpm preflight
 ```
 
 Expected: `FAIL  .env.local exists` (Task 2 creates it) and `ok` for the rest, exit status 1. This is the correct result at this point — it proves the script detects a real gap rather than rubber-stamping.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 11: Write `lefthook.yml` and install the hook**
+
+Moved here from Task 11 during execution. Two reasons, both discovered on the first `pnpm install`:
+
+1. lefthook's postinstall **creates an example `lefthook.yml` whenever one is missing** and re-syncs hooks. Left alone it reappears in `git status` after every install between here and Task 11.
+2. Rubric row 10 wants gates to exist before the commits they guard. Installing at Task 1 covers every commit in this phase; installing at Task 11 covers one.
+
+Scoped to changed packages (M4) — a full `pnpm typecheck` on every commit is slow enough to get bypassed with `--no-verify`, and a gate everyone skips is not a gate. With no workspace packages yet, the filtered command matches nothing and exits 0.
+
+```yaml
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: '*.{js,jsx,ts,tsx,json,css}'
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    typecheck:
+      run: pnpm exec turbo run typecheck --filter=...[HEAD]
+```
 
 ```bash
-git add .nvmrc package.json pnpm-workspace.yaml turbo.json tsconfig.base.json biome.json .gitignore scripts/doctor.mjs pnpm-lock.yaml
-git commit -m "chore: monorepo skeleton, pinned toolchain, and doctor script"
+pnpm exec lefthook install
+```
+
+Expected: `sync hooks: ✔️(pre-commit)`.
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add .nvmrc package.json pnpm-workspace.yaml turbo.json tsconfig.base.json biome.json .gitignore lefthook.yml scripts/preflight.mjs pnpm-lock.yaml
+git commit -m "chore: monorepo skeleton, pinned toolchain, and preflight script"
 ```
 
 ---
@@ -651,10 +694,10 @@ Expected: a table with `ok` = `1`.
 
 Mailpit's inbox is at http://localhost:8025 and MinIO's console at http://localhost:9001 (login `minio` / `minio12345`). Neither is used until Phase 1.
 
-- [ ] **Step 5: Re-run the doctor**
+- [ ] **Step 5: Re-run the preflight check**
 
 ```bash
-pnpm doctor
+pnpm preflight
 ```
 
 Expected: all checks `ok`, exit status 0. (`apps/web` does not exist yet, so its check is skipped.)
@@ -1230,7 +1273,7 @@ grep -c '^DATABASE_URL=' apps/web/.env.local
 
 Expected: `../../.env.local`, then `1`.
 
-`.gitignore`'s bare `.env.local` pattern matches at any depth, so the link is already ignored — nothing to add. `pnpm doctor` checks it from here on.
+`.gitignore`'s bare `.env.local` pattern matches at any depth, so the link is already ignored — nothing to add. `pnpm preflight` checks it from here on.
 
 > **Alternative if symlinks are a problem** (Windows without developer mode, a filesystem that does not carry them): add `dotenv-cli` and make the script `"dev": "dotenv -e ../../.env.local -- next dev --port 3000"`, repeated for `build` and `start`. The symlink is fewer moving parts and covers all three scripts at once, so it is the default.
 
@@ -1516,7 +1559,7 @@ pnpm --filter @tripi/web dev
 
 Open http://localhost:3000. Expected: `database: up` and `places cached: 0`.
 
-If it reads `database: down`, the cause is almost always the env link from Task 5 Step 2 or a stopped Docker stack — run `pnpm doctor`.
+If it reads `database: down`, the cause is almost always the env link from Task 5 Step 2 or a stopped Docker stack — run `pnpm preflight`.
 
 Also verify the HTTP route directly:
 
@@ -1970,7 +2013,7 @@ export function useTripDoc(tripId: string): TripDocState {
     const url = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL
     if (!url) {
       throw new Error(
-        'NEXT_PUBLIC_HOCUSPOCUS_URL is not set. Is apps/web/.env.local linked? Run pnpm doctor.',
+        'NEXT_PUBLIC_HOCUSPOCUS_URL is not set. Is apps/web/.env.local linked? Run pnpm preflight.',
       )
     }
 
@@ -2234,36 +2277,23 @@ git commit -m "test(web): smoke and two-tab collaboration e2e tests"
 
 ## Task 11: CI and the pre-commit hook
 
-`scripts/doctor.mjs` moved to Task 1 (review §4.7), so this task is CI and hooks only.
+`scripts/preflight.mjs` and `lefthook.yml` both moved to Task 1 during execution (review §4.7 for the first; lefthook's install-time file regeneration for the second — see Task 1 Step 11). This task is CI only.
 
 **Files:**
-- Create: `.github/workflows/ci.yml`, `lefthook.yml`
+- Create: `.github/workflows/ci.yml`
 
-- [ ] **Step 1: Write `lefthook.yml`**
+- [ ] **Step 1: Confirm the pre-commit hook is still installed**
 
-Scoped to changed packages (M4). The reviewed draft ran the full `pnpm typecheck` on every commit, which contradicts `docs/ops.md` §9 and makes the hook slow enough that it gets bypassed with `--no-verify` — a gate everyone skips is not a gate.
-
-```yaml
-pre-commit:
-  parallel: true
-  commands:
-    biome:
-      glob: '*.{js,jsx,ts,tsx,json,css}'
-      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
-      stage_fixed: true
-    typecheck:
-      run: pnpm exec turbo run typecheck --filter=...[HEAD]
-```
-
-- [ ] **Step 2: Install the hook**
+It was installed at Task 1 Step 11 and has been guarding every commit since. Verify rather than assume:
 
 ```bash
 pnpm exec lefthook install
+ls .git/hooks/pre-commit
 ```
 
-Expected: `sync hooks: ✔️ (pre-commit)`.
+Expected: `sync hooks: ✔️(pre-commit)` and the file exists.
 
-- [ ] **Step 3: Write `.github/workflows/ci.yml`**
+- [ ] **Step 2: Write `.github/workflows/ci.yml`**
 
 One workflow, per `docs/ops.md` §2. Four changes from the reviewed draft:
 
@@ -2357,7 +2387,7 @@ jobs:
 
 `.env.local` does not exist in CI, which is why the realtime service uses Node's `--env-file-if-exists` rather than `--env-file`. In CI the job's `env` block supplies the same variables to every process.
 
-- [ ] **Step 4: Run the full gate locally the way CI will**
+- [ ] **Step 3: Run the full gate locally the way CI will**
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test && pnpm build && CI=1 pnpm e2e
@@ -2365,15 +2395,15 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build && CI=1 pnpm e2e
 
 Expected: all five succeed.
 
-- [ ] **Step 5: Commit and push**
+- [ ] **Step 4: Commit and push**
 
 ```bash
-git add .github lefthook.yml
+git add .github
 git commit -m "ci: single workflow running lint, types, tests, build, and e2e on the build"
 git push -u origin phase-0-foundation
 ```
 
-- [ ] **Step 6: Confirm CI is green**
+- [ ] **Step 5: Confirm CI is green**
 
 ```bash
 gh run watch
@@ -2423,7 +2453,7 @@ realtime service, which is not a React Server environment.
 
 ## Phase 0 conventions
 - Lint and format is Biome (`pnpm lint`, `pnpm format`). No ESLint, no Prettier.
-- `pnpm doctor` checks node version, both `.env.local` files, docker, and ports before you
+- `pnpm preflight` checks node version, both `.env.local` files, docker, and ports before you
   debug anything else. Machine state lives there, never in a plan.
 - `.env.local` lives at the repo root; `apps/web/.env.local` is a symlink to it, because Next
   only reads env files from the directory it was started in.
@@ -2487,7 +2517,7 @@ Then open http://localhost:3000.
 
 On Linux, `sed -i` takes no `''` argument.
 
-`pnpm doctor` diagnoses a broken local setup and is the first thing to run when
+`pnpm preflight` diagnoses a broken local setup and is the first thing to run when
 something misbehaves. `pnpm build && pnpm start` runs the production path.
 Mailpit's inbox is at http://localhost:8025 and MinIO's console at
 http://localhost:9001.
@@ -2508,7 +2538,7 @@ Phase 0 is complete when every line below has been run and produced the stated r
 
 **Local — dev path**
 
-- [ ] `pnpm doctor` exits 0 with every check `ok`.
+- [ ] `pnpm preflight` exits 0 with every check `ok`.
 - [ ] `pnpm dev` brings up both services; http://localhost:3000 shows `database: up` from a server component.
 - [ ] The same page shows `up · superjson: ok` from the browser.
 - [ ] Two browser windows both show `synced`, and incrementing in one moves the number in the other.

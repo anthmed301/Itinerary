@@ -1,0 +1,9 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'services/*'
+# pnpm 11 requires explicit approval for dependency install scripts.
+# lefthook's postinstall downloads its platform binary; without this the
+# `lefthook` command does not exist and Task 11's pre-commit hook cannot install.
+allowBuilds:
+  lefthook: true

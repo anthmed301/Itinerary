@@ -1773,11 +1773,21 @@ export default defineConfig({
   platform: 'node',
   // @tripi/shared ships TypeScript source. tsdown externalises declared
   // dependencies by default, which would leave Node to type-strip the shared
-  // package at runtime and fail on its extensionless relative imports.
-  // Bundling it makes dist/ self-contained. Config-only: the CLI flag is a no-op.
-  deps: { alwaysBundle: ['@tripi/shared'] },
+  // package at runtime and fail on its extensionless relative imports
+  // (db/client.ts and yjs/schema.ts both have them).
+  //
+  // Must be a RegExp, not the string '@tripi/shared': a bare string matches only
+  // the exact specifier and leaves subpath imports such as '@tripi/shared/env'
+  // and '@tripi/shared/db' external. Verified by inspecting dist/server.mjs.
+  //
+  // Config-only — the CLI flags (--no-external, --deps.always-bundle) are a no-op.
+  deps: { alwaysBundle: [/^@tripi\/shared(\/.*)?$/] },
 })
 ```
+
+> **The pattern must be a RegExp.** `alwaysBundle: ['@tripi/shared']` matches the bare specifier only. Every real import in this codebase is a *subpath* — `@tripi/shared/env` here, `@tripi/shared/db` from Phase 3 — and those stay external, silently. Caught during execution by inspecting the bundle: it was 0.88 kB and still contained `import { realtimeEnv } from "@tripi/shared/env"`. With the RegExp it is 160 kB and imports only `@hocuspocus/server` and `pino`.
+>
+> **This failure is latent, not loud.** The string-matched build *starts and serves websockets correctly today*, because `env.ts` is a leaf module with no relative imports, so Node's type stripping handles it. It breaks the first time the service imports something from `@tripi/shared/db` or `@tripi/shared/yjs`, both of which do have extensionless relative imports — i.e. in Phase 3, far from the change that caused it. Check the bundle, not just the exit code.
 
 - [ ] **Step 3: Write `services/realtime/tsconfig.json`**
 
@@ -1874,7 +1884,14 @@ head -3 services/realtime/dist/server.mjs
 pnpm --filter @tripi/realtime start
 ```
 
-Expected from `head`: bundled source from `../../packages/shared/src/...`, **not** a line reading `import … from "@tripi/shared"`. If you see that import, `deps.alwaysBundle` is not taking effect and `start` will crash with `ERR_MODULE_NOT_FOUND` — re-check Step 2.
+Expected from `head`: inlined source, **not** a line reading `import … from "@tripi/shared…"`. Make it a hard check rather than an eyeball:
+
+```bash
+grep -c '@tripi/shared' services/realtime/dist/server.mjs   # must print 0
+grep -oE '^import .* from "[^"]+"' services/realtime/dist/server.mjs
+```
+
+Expected: `0`, then exactly two external imports — `@hocuspocus/server` and `pino`, the service's own declared dependencies. Anything matching `@tripi/shared` means `deps.alwaysBundle` is not covering that specifier; re-check the RegExp in Step 2. Note the artefact may still *run* with the import present (see Step 2's note), so the grep is the test, not the exit code.
 
 Expected from `start`: the same `realtime server listening` line, served from the built file. Stop with Ctrl+C.
 
@@ -2582,7 +2599,7 @@ Phase 0 is complete when every line below has been run and produced the stated r
 **Local — production path**
 
 - [ ] `pnpm build` succeeds from a clean `.turbo` (`rm -rf .turbo && pnpm build`).
-- [ ] `pnpm --filter @tripi/realtime start` logs `realtime server listening` **from `dist/server.mjs`**, and `head -3 services/realtime/dist/server.mjs` shows bundled shared source rather than an `import … from "@tripi/shared"` line.
+- [ ] `pnpm --filter @tripi/realtime start` logs `realtime server listening` **from `dist/server.mjs`**, and `grep -c '@tripi/shared' services/realtime/dist/server.mjs` prints `0`.
 - [ ] `pnpm start` serves the same working page from the built artefacts.
 - [ ] `grep -rl "postgres-js\|node:tls" apps/web/.next/static/chunks/` returns nothing.
 - [ ] `pnpm --filter @tripi/web build` succeeds with Postgres stopped (`force-dynamic` verified, Task 6 Step 7).

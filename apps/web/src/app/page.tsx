@@ -1,3 +1,4 @@
+import { HealthProbe } from '@/components/HealthProbe'
 import { serverApi } from '@/server/trpc/root'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,8 @@ export default async function HomePage() {
         <p data-testid="db-status">database: {health.database}</p>
         <p data-testid="place-count">places cached: {health.placeCount}</p>
       </section>
+
+      <HealthProbe />
     </main>
   )
 }

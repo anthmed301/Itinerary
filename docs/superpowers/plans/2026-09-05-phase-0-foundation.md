@@ -264,14 +264,17 @@ packages:
   - 'packages/*'
   - 'services/*'
 
-# pnpm 11 requires explicit approval for dependency install scripts.
-# lefthook's postinstall downloads its platform binary; without this the
-# `lefthook` command does not exist and the pre-commit hook cannot install.
+# pnpm 11 requires explicit approval for dependency install scripts. Each of
+# these downloads or compiles a native binary at install time; without approval
+# the package installs but its executable does not exist.
+#   lefthook  — git hook runner binary (pre-commit gate, Task 1)
+#   esbuild   — native bundler binary used by vitest and drizzle-kit
 allowBuilds:
+  esbuild: true
   lefthook: true
 ```
 
-> `allowBuilds` is a pnpm 11 requirement, not an optional hardening step. The first `pnpm install` fails with `ERR_PNPM_IGNORED_BUILDS`, appends `lefthook: set this to true or false` to this file, and leaves lefthook's binary uninstalled. Writing it up front skips that round trip.
+> `allowBuilds` is a pnpm 11 requirement, not an optional hardening step. An unapproved package installs but its binary does not, and `pnpm install` fails with `ERR_PNPM_IGNORED_BUILDS` after appending `<name>: set this to true or false` to this file. `esbuild` is listed here even though nothing needs it until Task 3, because it arrives as a transitive dependency of both vitest and drizzle-kit and would otherwise stop that install too. Writing both up front skips two round trips.
 
 - [ ] **Step 3: Write root `package.json`**
 
@@ -757,6 +760,7 @@ The exports map is the boundary (review §3.2). `.` is the browser-safe barrel; 
     "zod": "4.5.4"
   },
   "devDependencies": {
+    "@types/node": "24.13.3",
     "drizzle-kit": "0.31.10",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
@@ -780,6 +784,8 @@ Source files are exported directly rather than built to `dist`. Next transpiles 
 ```
 
 No `outDir` or `rootDir`: this package is never built by `tsc`. Setting `rootDir: "src"` would also reject `drizzle.config.ts`, which sits outside `src`.
+
+`@types/node` is declared in this package's own devDependencies, not inherited from the root. `"types": ["node"]` would resolve through the parent-directory walk into the root `node_modules` today, but that depends on hoisting rather than on a declared dependency — the kind of thing that works until pnpm's layout changes. Declare what you use.
 
 - [ ] **Step 3: Write the failing test `packages/shared/src/env.test.ts`**
 

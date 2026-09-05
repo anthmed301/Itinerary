@@ -2,8 +2,11 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'services/*'
-# pnpm 11 requires explicit approval for dependency install scripts.
-# lefthook's postinstall downloads its platform binary; without this the
-# `lefthook` command does not exist and Task 11's pre-commit hook cannot install.
+# pnpm 11 requires explicit approval for dependency install scripts. Each of
+# these downloads or compiles a native binary at install time; without approval
+# the package installs but its executable does not exist.
+#   lefthook  — git hook runner binary (pre-commit gate, Task 1)
+#   esbuild   — native bundler binary used by vitest and drizzle-kit
 allowBuilds:
+  esbuild: true
   lefthook: true

@@ -50,7 +50,9 @@ try {
   record('docker daemon', false, 'start Docker Desktop')
 }
 
-record('postgres :5432', await portOpen(5432), 'run pnpm db:up')
+// 5433, not 5432: a Homebrew postgresql@17 service owns 5432 on this machine, so
+// checking 5432 reports `ok` for a database that is not ours. See docker-compose.yml.
+record('postgres :5433', await portOpen(5433), 'run pnpm db:up')
 record('mailpit :8025', await portOpen(8025), 'run pnpm db:up')
 
 for (const { name, ok, detail } of checks) {

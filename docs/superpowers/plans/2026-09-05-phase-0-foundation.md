@@ -512,7 +512,7 @@ try {
   record('docker daemon', false, 'start Docker Desktop')
 }
 
-record('postgres :5432', await portOpen(5432), 'run pnpm db:up')
+record('postgres :5433', await portOpen(5433), 'run pnpm db:up')
 record('mailpit :8025', await portOpen(8025), 'run pnpm db:up')
 
 for (const { name, ok, detail } of checks) {
@@ -590,15 +590,22 @@ Postgres, MinIO for S3, Mailpit for email. Hocuspocus is deliberately **not** he
 
 Images are pinned to exact tags (review §4.5). `latest` in a compose file is the same class of mistake as a caret in `package.json`.
 
+**Host port 5433, not 5432.** A Homebrew `postgresql@17` service owns 5432 on the dev machine — database `album_app`, started by a LaunchAgent at login — so `docker compose up` cannot bind it. Decided 2026-09-05: remap rather than stop the other service, which would break an unrelated project and re-collide on every reboot. CI uses the same mapping so `DATABASE_URL` is byte-identical in both environments; the container's internal port is still 5432, so nothing inside the network changes. Deviations table carries this.
+
+Every service also has a **healthcheck**, including MinIO and Mailpit, which the reviewed draft gave only to Postgres. `db:up` uses `docker compose up -d --wait`, and `--wait` treats a service with no healthcheck as healthy the moment it starts — so without these three, `--wait` returns before the stack is usable and the guarantee that lets `db:reset` drop its `sleep` is fiction.
+
 ```yaml
 services:
+  # Host port 5433, not 5432: a Homebrew postgresql@17 service owns 5432 on the
+  # dev machine (database `album_app`) and auto-starts on login. CI uses the same
+  # mapping so DATABASE_URL is byte-identical in both environments.
   postgres:
     image: postgres:17.11-alpine
     environment:
       POSTGRES_USER: tripi
       POSTGRES_PASSWORD: tripi
       POSTGRES_DB: tripi
-    ports: ['5432:5432']
+    ports: ['5433:5432']
     volumes: ['pgdata:/var/lib/postgresql/data']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U tripi -d tripi']
@@ -647,7 +654,7 @@ NEXT_PUBLIC_HOCUSPOCUS_URL=ws://localhost:1234
 
 # ---- Server-only ----
 # Postgres from docker-compose
-DATABASE_URL=postgresql://tripi:tripi@localhost:5432/tripi
+DATABASE_URL=postgresql://tripi:tripi@localhost:5433/tripi
 
 # Realtime server
 HOCUSPOCUS_PORT=1234
@@ -782,7 +789,7 @@ import { parseCoreEnv, parseRealtimeEnv, parseWebEnv } from './env'
 
 const core = {
   NODE_ENV: 'development',
-  DATABASE_URL: 'postgresql://tripi:tripi@localhost:5432/tripi',
+  DATABASE_URL: 'postgresql://tripi:tripi@localhost:5433/tripi',
 }
 
 const web = {
@@ -799,7 +806,7 @@ const realtime = {
 
 describe('core env', () => {
   it('accepts a complete environment', () => {
-    expect(parseCoreEnv(core).DATABASE_URL).toBe('postgresql://tripi:tripi@localhost:5432/tripi')
+    expect(parseCoreEnv(core).DATABASE_URL).toBe('postgresql://tripi:tripi@localhost:5433/tripi')
   })
 
   it('defaults NODE_ENV to development', () => {
@@ -1089,7 +1096,7 @@ export { schema }
 
 - [ ] **Step 3: Write `packages/shared/drizzle.config.ts`**
 
-The hard-coded localhost fallback is **deleted** (review §4.4). If the regex misses — a quoted value, CRLF line endings, a renamed file — the old version silently migrated whatever database happened to be listening on 5432. Failing loudly is the whole point of an env contract.
+The hard-coded localhost fallback is **deleted** (review §4.4). If the regex misses — a quoted value, CRLF line endings, a renamed file — the old version silently migrated whatever database happened to be listening on that port. Failing loudly is the whole point of an env contract.
 
 ```ts
 import { readFileSync } from 'node:fs'
@@ -2325,7 +2332,7 @@ jobs:
           POSTGRES_USER: tripi
           POSTGRES_PASSWORD: tripi
           POSTGRES_DB: tripi
-        ports: ['5432:5432']
+        ports: ['5433:5432']
         options: >-
           --health-cmd "pg_isready -U tripi -d tripi"
           --health-interval 5s
@@ -2333,7 +2340,7 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://tripi:tripi@localhost:5432/tripi
+      DATABASE_URL: postgresql://tripi:tripi@localhost:5433/tripi
       HOCUSPOCUS_PORT: '1234'
       HOCUSPOCUS_JWT_SECRET: ci-secret-that-is-at-least-thirty-two-chars
       NEXT_PUBLIC_APP_URL: http://localhost:3000
@@ -2584,6 +2591,11 @@ Carry these into the docs backlog in `docs/prd-review-2026-09-05.md` §3 rather 
 | Next 16, Zod 4, Hocuspocus 4 | Next 15, Zod 3, Hocuspocus 2 | Those are a major behind as of 2026-09-05 |
 | Vitest 4, not 5 | Not mentioned | Vitest 5 was two days old with no patch; version policy selects the previous stable |
 | Postgres 17.11 | Postgres 16 | Current stable, and matches what RDS offers |
+| **Postgres on host port 5433** | 5432 implied everywhere | A Homebrew `postgresql@17` (database `album_app`) owns 5432 on the dev machine and auto-starts at login. Remapping leaves that project working and cannot re-collide; stopping it would break an unrelated app and recur on every reboot. Container-internal port is unchanged; CI uses 5433 too so `DATABASE_URL` is identical in both. Decided 2026-09-05 |
+| Healthchecks on all three services | Only Postgres had one | `docker compose up -d --wait` counts a service without a healthcheck as healthy immediately, so `--wait` would return before MinIO and Mailpit were usable |
+| `allowBuilds: lefthook: true` in `pnpm-workspace.yaml` | Not mentioned | pnpm 11 blocks dependency install scripts by default; without it lefthook's binary never downloads and the pre-commit hook cannot install |
+| Script is `pnpm preflight`, not `pnpm doctor` | Review §4.7 and rubric say "`pnpm doctor`" | pnpm 11 ships a built-in `pnpm doctor` that shadows a same-named script. The built-in ran and reported "All checks passed" with no `.env.local` present — a silent false green. Found during execution 2026-09-05 |
+| `lefthook.yml` written at Task 1, not Task 11 | Review put hooks at Task 11 | lefthook's postinstall regenerates an example file whenever one is missing, so it reappears after every `pnpm install`. Installing at Task 1 also satisfies rubric row 10 for this phase's commits rather than only the last one |
 | **MinIO pinned to a frozen image** | Not mentioned | `minio/minio` last published 2025-09-07; community edition is in maintenance. Works as an S3 mock. Revisit at Phase 1 when uploads land: RustFS, Garage, LocalStack S3. §4.5 |
 | No `pino` in `apps/web` | Not mentioned | Nothing imported it. When Phase 1 does, add `serverExternalPackages: ['pino']` at the same time. M6 |
 | No `preview` environment | "Branched RDS" per PR (`architecture.md` §4) | RDS has no branching; that is a Neon feature. Deferred to Stage 3 |

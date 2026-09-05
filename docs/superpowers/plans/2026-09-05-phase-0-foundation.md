@@ -2673,33 +2673,35 @@ git commit -m "docs: record phase 0 stack, boundary rules, and the Stage 2 deplo
 
 ## Definition of done
 
+> **Status: complete, 2026-09-05.** All 19 checks below were run from a cold Turbo cache and passed; CI run `33975103512` is green on every step including e2e against the build. PR: `anthmed301/Itinerary#1`.
+
 Phase 0 is complete when every line below has been run and produced the stated result. Dev-mode green is not green (review §4.2).
 
 **Local — dev path**
 
-- [ ] `pnpm preflight` exits 0 with every check `ok`.
-- [ ] `pnpm dev` brings up both services; http://localhost:3000 shows `database: up` from a server component.
-- [ ] The same page shows `up · superjson: ok` from the browser.
-- [ ] Two browser windows both show `synced`, and incrementing in one moves the number in the other.
+- [x] `pnpm preflight` exits 0 with every check `ok`.
+- [x] `pnpm dev` brings up both services; http://localhost:3000 shows `database: up` from a server component.
+- [x] The same page shows `up · superjson: ok` from the browser.
+- [x] Two browser windows both show `synced`, and incrementing in one moves the number in the other.
 
 **Local — production path**
 
-- [ ] `pnpm build` succeeds from a clean `.turbo` (`rm -rf .turbo && pnpm build`).
-- [ ] `pnpm --filter @tripi/realtime start` logs `realtime server listening` **from `dist/server.mjs`**, and `grep -c '@tripi/shared' services/realtime/dist/server.mjs` prints `0`.
-- [ ] `pnpm start` serves the same working page from the built artefacts.
-- [ ] `grep -rl "postgres-js\|node:tls" apps/web/.next/static/chunks/` returns nothing.
-- [ ] `pnpm --filter @tripi/web build` succeeds with Postgres stopped (`force-dynamic` verified, Task 6 Step 7).
+- [x] `pnpm build` succeeds from a clean `.turbo` (`rm -rf .turbo && pnpm build`).
+- [x] `pnpm --filter @tripi/realtime start` logs `realtime server listening` **from `dist/server.mjs`**, and `grep -c '@tripi/shared' services/realtime/dist/server.mjs` prints `0`.
+- [x] `pnpm start` serves the same working page from the built artefacts.
+- [x] `grep -rl "postgres-js\|node:tls" apps/web/.next/static/chunks/` returns nothing.
+- [x] `pnpm --filter @tripi/web build` succeeds with Postgres stopped (`force-dynamic` verified, Task 6 Step 7).
 
 **Gates**
 
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && CI=1 pnpm e2e` all pass locally.
-- [ ] A `'use client'` file importing `@tripi/shared/db` fails `pnpm lint` (Task 4 Step 5).
-- [ ] CI is green on the `phase-0-foundation` branch, including the Build step, both bundle assertions, and e2e against the build. Requires an open PR — a branch push alone does not trigger this workflow (Task 11 Step 5).
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && CI=1 pnpm e2e` all pass locally.
+- [x] A `'use client'` file importing `@tripi/shared/db` fails `pnpm lint` (Task 4 Step 5).
+- [x] CI is green on the `phase-0-foundation` branch, including the Build step, both bundle assertions, and e2e against the build. Requires an open PR — a branch push alone does not trigger this workflow (Task 11 Step 5).
 
 **Records**
 
-- [ ] `CLAUDE.md` records the pinned versions, the three-unit shape, and the server/client boundary rule.
-- [ ] `PRD.md` §10 carries the Stage 2 deploy decision, and §7's Phase 0 goal cites it.
+- [x] `CLAUDE.md` records the pinned versions, the three-unit shape, and the server/client boundary rule.
+- [x] `PRD.md` §10 carries the Stage 2 deploy decision, and §7's Phase 0 goal cites it.
 
 > The reviewed draft's "cold start under 60 seconds (PRD §6)" line is deleted. Nothing measured it, so it was decoration. The honest version is a README promise, checked when you care: `time (pnpm install && pnpm db:up && pnpm db:migrate)` on a clean clone.
 

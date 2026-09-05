@@ -456,6 +456,7 @@ playwright-report/
 .env.local
 .env.*.local
 apps/web/next-env.d.ts
+*.tsbuildinfo
 *.log
 .DS_Store
 ```

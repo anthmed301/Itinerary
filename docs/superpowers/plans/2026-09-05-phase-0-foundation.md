@@ -8,7 +8,7 @@
 
 **Architecture:** Three workspace units instead of the eight in `docs/architecture.md` §2 (see `docs/prd-review-2026-09-05.md` §6.1). `apps/web` is the Next.js app and owns all UI, tRPC, and server modules. `services/realtime` is the Hocuspocus server. `packages/shared` holds the three things both must agree on: the Drizzle schema, the Yjs document shape, and the Zod-validated env contract. Postgres, MinIO, and Mailpit run in Docker; both Node services run on the host with hot reload (review §6.2).
 
-**Tech Stack:** Node 24 LTS · pnpm 11 · Turborepo 2 · TypeScript 7 · Next.js 16 (App Router) · React 19.2 · Tailwind CSS 4 · tRPC 11 · Drizzle ORM 0.45 · Postgres 17 · Yjs 13 · Hocuspocus 4 · Zod 4 · Biome 2 · Vitest 4 · Playwright 1.63 · Lefthook 2 · tsdown 0.22
+**Tech Stack:** Node 24 LTS · pnpm 11 · Turborepo 2 · TypeScript 7 · Next.js 16 (App Router) · React 19.2 · Tailwind CSS 4 · tRPC 11 · Drizzle ORM 0.45 · Postgres 17 · Yjs 13 · Hocuspocus 4 · Zod 4 · Biome 2 · Vitest 4 · Playwright 1.62 · Lefthook 2 · tsdown 0.22
 
 **Decisions this plan encodes:** version policy over "latest" · full vertical slice · Biome over ESLint+Prettier · Yjs as the only content write path (PRD §4.3) · days positional (PRD §4.2) · server/client boundary enforced by lint, not prose.
 
@@ -74,7 +74,7 @@ Every version below was resolved from the npm registry on 2026-09-05. Pin these 
 | @hocuspocus/provider | 4.6.0 | |
 | @biomejs/biome | 2.5.12 | |
 | **vitest** | **4.1.11** | ⬇ was 5.0.0. Vitest 5 shipped 2026-09-03 with no patch; policy selects the previous stable. Bump when 5.0.x lands |
-| @playwright/test | 1.63.0 | Published 2026-09-04. A minor on an established major, not a `.0.0`; policy allows it. Fallback: `1.62.1` (2026-07-30) if the browser install or `webServer` behaves oddly in Task 10 |
+| **@playwright/test** | **1.62.1** | ⬇ was 1.63.0. **pnpm 11 enforces the age policy itself**: it ships a default `minimumReleaseAge` gate, rejected 1.63.0 (published 2026-09-04) on install, and silently wrote a `minimumReleaseAgeExclude` block into `pnpm-workspace.yaml` to let it through. An auto-written exception defeats the gate, so the plan takes the fallback it had already named. 1.62.1 (2026-07-30) passes the gate with no exclusion list to maintain |
 | lefthook | 2.1.12 | |
 | tsx | 4.23.13 | |
 | **tsdown** | **0.22.14** | ➕ new. Bundles `services/realtime` so its artefact is self-contained (§3.3). `0.23.0` is two days old; policy selects `0.22.14` |
@@ -1256,7 +1256,7 @@ git commit -m "feat(shared): drizzle client and place table with first migration
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
@@ -1335,10 +1335,16 @@ const config: NextConfig = {
   reactStrictMode: true,
   // Workspace packages ship TypeScript source, so Next must transpile them.
   transpilePackages: ['@tripi/shared'],
+  // Next 16 writes apps/web/AGENTS.md and apps/web/CLAUDE.md on first dev run.
+  // This repo keeps its agent instructions in the root CLAUDE.md; a generated
+  // second copy scoped to apps/web would silently compete with it.
+  agentRules: false,
 }
 
 export default config
 ```
+
+> `agentRules: false` is not cosmetic. Next 16 writes `AGENTS.md` **and `CLAUDE.md`** into the app directory on the first `next dev`, announcing it in one line of startup output that is easy to miss. Left alone they get committed, and `apps/web/CLAUDE.md` is then loaded as project instructions for any agent working in that directory — a generated file quietly competing with the curated root `CLAUDE.md`. It does not touch the root file.
 
 - [ ] **Step 5: Write `apps/web/postcss.config.mjs`**
 
@@ -1355,7 +1361,7 @@ export default {
 Tailwind 4 uses a single import instead of the three `@tailwind` directives.
 
 ```css
-@import 'tailwindcss';
+@import "tailwindcss";
 
 :root {
   color-scheme: light dark;
@@ -2444,7 +2450,7 @@ Append under "Working agreements":
 ## Pinned stack (Phase 0, 2026-09-05)
 Node 24 · pnpm 11.25.0 · Turbo 2.10.12 · TypeScript 7.0.2 · Next 16.3.4 · React 19.2.8 ·
 Tailwind 4.3.3 · tRPC 11.18.0 · Drizzle 0.45.2 · Postgres 17.11 · Zod 4.5.4 · Yjs 13.6.32 ·
-Hocuspocus 4.6.0 · Biome 2.5.12 · Vitest 4.1.11 · Playwright 1.63.0 · Lefthook 2.1.12 ·
+Hocuspocus 4.6.0 · Biome 2.5.12 · Vitest 4.1.11 · Playwright 1.62.1 · Lefthook 2.1.12 ·
 tsdown 0.22.14 · @types/node 24.13.3
 
 Exact versions, no carets. Selection policy: newest release that is ≥2 weeks old with ≥1

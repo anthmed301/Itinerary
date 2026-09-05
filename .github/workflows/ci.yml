@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_USER: tripi
+          POSTGRES_PASSWORD: tripi
+          POSTGRES_DB: tripi
+        # 5433 on the host to match docker-compose.yml, so DATABASE_URL is
+        # byte-identical locally and in CI.
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U tripi -d tripi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://tripi:tripi@localhost:5433/tripi
+      HOCUSPOCUS_PORT: '1234'
+      HOCUSPOCUS_JWT_SECRET: ci-secret-that-is-at-least-thirty-two-chars
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_HOCUSPOCUS_URL: ws://localhost:1234
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — the action reads packageManager from package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Lint and format check
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      # Production parity: the artefacts the e2e step serves are built here, so a
+      # build break reports as a build break rather than as a webServer timeout.
+      - name: Build
+        run: pnpm build
+
+      - name: Assert the realtime artefact is self-contained
+        run: |
+          if grep -q '@tripi/shared' services/realtime/dist/server.mjs; then
+            echo "::error::dist/server.mjs still imports @tripi/shared — check deps.alwaysBundle in tsdown.config.ts"
+            exit 1
+          fi
+
+      - name: Assert no database driver in the client bundle
+        run: |
+          if grep -rlq "postgres-js\|node:tls" apps/web/.next/static/chunks/; then
+            echo "::error::server code reached the browser bundle"
+            exit 1
+          fi
+
+      - name: Install Playwright browser
+        run: pnpm --filter @tripi/web exec playwright install chromium --with-deps
+
+      - name: End-to-end tests against the build
+        run: pnpm e2e
+        env:
+          CI: 'true'
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

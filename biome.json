@@ -1,0 +1,59 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": ["**", "!packages/shared/migrations"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "asNeeded"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@tripi/shared/db": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
+              "@tripi/shared/db/schema": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
+              "@tripi/shared/env": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**."
+            }
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "apps/web/src/server/**",
+        "apps/web/src/app/api/**",
+        "services/realtime/**",
+        "packages/shared/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    }
+  ]
+}

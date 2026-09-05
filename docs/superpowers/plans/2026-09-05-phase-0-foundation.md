@@ -322,19 +322,35 @@ allowBuilds:
 ```json
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV", "CI"],
   "tasks": {
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "DATABASE_URL",
+        "HOCUSPOCUS_PORT",
+        "HOCUSPOCUS_JWT_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_HOCUSPOCUS_URL"
+      ]
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": ["NEXT_PUBLIC_APP_URL", "NEXT_PUBLIC_HOCUSPOCUS_URL"]
     },
     "start": {
       "dependsOn": ["build"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "DATABASE_URL",
+        "HOCUSPOCUS_PORT",
+        "HOCUSPOCUS_JWT_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_HOCUSPOCUS_URL"
+      ]
     },
     "typecheck": {
       "dependsOn": ["^build"]
@@ -345,6 +361,18 @@ allowBuilds:
   }
 }
 ```
+
+> **The `env` declarations are load-bearing, not documentation.** Turbo 2 defaults to **strict env mode**: a task receives only the variables named in `globalEnv` or its own `env`, and everything else in the ambient environment is filtered out. Without these lists, `pnpm start` in CI produces:
+>
+> ```
+> Error: Invalid realtime environment:
+>   DATABASE_URL: Invalid input: expected string, received undefined
+>   HOCUSPOCUS_JWT_SECRET: Invalid input: expected string, received undefined
+> ```
+>
+> — with both variables plainly set in the workflow's `env:` block. **This cannot be caught locally**, because `--env-file-if-exists=../../.env.local` loads the file *inside* the Node process, after Turbo has already filtered the environment. Local `pnpm start` therefore passes while CI fails, which is the exact dev/CI divergence rubric row 4 exists to expose. Found during execution; reproduced by moving `.env.local` aside and running `turbo run start` with the variables exported.
+>
+> `HOCUSPOCUS_PORT` does not appear in the error only because its schema has `.default(1234)` — it was being silently filtered too.
 
 - [ ] **Step 5: Write `tsconfig.base.json`**
 
@@ -2499,10 +2527,25 @@ git commit -m "ci: single workflow running lint, types, tests, build, and e2e on
 git push -u origin phase-0-foundation
 ```
 
-- [ ] **Step 5: Confirm CI is green**
+- [ ] **Step 5: Open a pull request — the push alone triggers nothing**
+
+This workflow runs `on: push` to **main** and `on: pull_request`. Pushing `phase-0-foundation` matches neither, so no run starts and `gh run list` is empty. `gh workflow list` is *also* empty, because it reads the default branch and `ci.yml` does not exist there yet — which makes it look like the workflow was never registered.
+
+For a same-repo pull request GitHub uses the workflow file from the **head** branch, so opening the PR runs the version in this branch:
 
 ```bash
-gh run watch
+gh pr create --base main --head phase-0-foundation --title "Phase 0 — Foundation" --body "..."
+gh run list --branch phase-0-foundation --limit 1
+```
+
+Expected: a `pull_request` run appears, queued.
+
+> Found during execution. The reviewed plan ended with a bare `gh run watch`, which would have waited forever on a run that was never going to start. The alternative — adding `branches: ['**']` to the push trigger — runs the full Playwright suite on every branch push and double-runs on PRs; the PR route keeps the conventional config.
+
+- [ ] **Step 6: Confirm CI is green**
+
+```bash
+gh run watch <run-id> --exit-status
 ```
 
 Expected: the `ci` job concludes successfully.
@@ -2651,7 +2694,7 @@ Phase 0 is complete when every line below has been run and produced the stated r
 
 - [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && CI=1 pnpm e2e` all pass locally.
 - [ ] A `'use client'` file importing `@tripi/shared/db` fails `pnpm lint` (Task 4 Step 5).
-- [ ] CI is green on the `phase-0-foundation` branch, including the Build step and e2e against the build.
+- [ ] CI is green on the `phase-0-foundation` branch, including the Build step, both bundle assertions, and e2e against the build. Requires an open PR — a branch push alone does not trigger this workflow (Task 11 Step 5).
 
 **Records**
 

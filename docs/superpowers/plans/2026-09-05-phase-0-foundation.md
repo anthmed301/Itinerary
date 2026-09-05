@@ -2230,13 +2230,32 @@ export default defineConfig({
 
 `cwd: '../..'` runs the command from the repo root so Turbo starts the realtime server alongside the web app. The collaboration test needs both. The timeout is 180s rather than 120s because in CI the command now includes a `next build`.
 
-- [ ] **Step 2: Install the browser**
+- [ ] **Step 2: Keep vitest out of the e2e directory**
+
+Write `apps/web/vitest.config.ts` **before** adding any spec, and add it to `tsconfig.json`'s `include`:
+
+```ts
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    // Playwright owns tests/e2e. Without this, vitest collects those .spec.ts
+    // files, fails to run Playwright's `test()` outside its own runner, and
+    // `pnpm test` goes red for reasons that have nothing to do with unit tests.
+    include: ['src/**/*.test.{ts,tsx}'],
+  },
+})
+```
+
+> Found during execution. `@tripi/web`'s test script is `vitest run --passWithNoTests`, whose default `include` picks up `tests/e2e/*.spec.ts`. Playwright's `test()` throws when called outside the Playwright runner, so root `pnpm test` fails with `Test Files 2 failed` and `Tests no tests` — a confusing error pointing at line 3 of a file that is not a unit test. The reviewed plan never surfaced this because it only ever ran `pnpm --filter @tripi/shared test`, never the root `pnpm test`, after this task added the specs.
+
+- [ ] **Step 3: Install the browser**
 
 ```bash
 pnpm --filter @tripi/web exec playwright install chromium --with-deps
 ```
 
-- [ ] **Step 3: Write `apps/web/tests/e2e/smoke.spec.ts`**
+- [ ] **Step 4: Write `apps/web/tests/e2e/smoke.spec.ts`**
 
 ```ts
 import { expect, test } from '@playwright/test'
@@ -2258,7 +2277,7 @@ test('browser reaches tRPC over HTTP with superjson intact', async ({ page }) =>
 })
 ```
 
-- [ ] **Step 4: Write `apps/web/tests/e2e/collab.spec.ts`**
+- [ ] **Step 5: Write `apps/web/tests/e2e/collab.spec.ts`**
 
 This is the test that does not get deleted. It becomes the Phase 3 collaboration regression test, which is why it waits on `synced` rather than `connected` (review §4.1).
 
@@ -2298,7 +2317,7 @@ test('a value set in one tab appears in another through hocuspocus', async ({ br
 })
 ```
 
-- [ ] **Step 5: Run the suite in dev mode**
+- [ ] **Step 6: Run the suite in dev mode**
 
 Make sure Docker is up and no stray dev server is running, then:
 
@@ -2308,18 +2327,24 @@ pnpm --filter @tripi/web e2e
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Run the suite the way CI will**
+- [ ] **Step 7: Run the suite the way CI will**
 
 Same specs, production artefacts. This is the first time the whole system runs from a build.
 
+`CI=1` makes Playwright start `pnpm start` (which builds first) instead of `pnpm dev`, and sets `reuseExistingServer: false` — so **stray dev servers from earlier steps will collide**. Free the ports first; an occupied :1234 surfaces only as `@tripi/realtime#start ... exited (1)` with no mention of the port.
+
 ```bash
+for p in 1234 3000; do
+  PIDS=$(lsof -nP -tiTCP:$p -sTCP:LISTEN 2>/dev/null)
+  [ -n "$PIDS" ] && kill -9 $PIDS
+done
 pnpm db:up
 CI=1 pnpm --filter @tripi/web e2e
 ```
 
-Expected: 3 passed, and the Playwright output shows it starting `pnpm start` rather than `pnpm dev`.
+Expected: 3 passed, and the Playwright output shows `[WebServer] $ turbo run start` rather than `turbo run dev`.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add apps/web
@@ -2378,6 +2403,8 @@ jobs:
           POSTGRES_USER: tripi
           POSTGRES_PASSWORD: tripi
           POSTGRES_DB: tripi
+        # 5433 on the host to match docker-compose.yml, so DATABASE_URL is
+        # byte-identical locally and in CI.
         ports: ['5433:5432']
         options: >-
           --health-cmd "pg_isready -U tripi -d tripi"
@@ -2421,6 +2448,22 @@ jobs:
       # build break reports as a build break rather than as a webServer timeout.
       - name: Build
         run: pnpm build
+
+      # The two boundary guarantees this phase established, asserted in CI so a
+      # later change cannot quietly undo them. Both are greps, not opinions.
+      - name: Assert the realtime artefact is self-contained
+        run: |
+          if grep -q '@tripi/shared' services/realtime/dist/server.mjs; then
+            echo "::error::dist/server.mjs still imports @tripi/shared — check deps.alwaysBundle in tsdown.config.ts"
+            exit 1
+          fi
+
+      - name: Assert no database driver in the client bundle
+        run: |
+          if grep -rlq "postgres-js\|node:tls" apps/web/.next/static/chunks/; then
+            echo "::error::server code reached the browser bundle"
+            exit 1
+          fi
 
       - name: Install Playwright browser
         run: pnpm --filter @tripi/web exec playwright install chromium --with-deps

@@ -1,5 +1,22 @@
 # Tripi Phase 1 — Auth + Profile Implementation Plan
 
+> ## Revision 2 — 2026-09-06, after independent review
+>
+> Reviewed by a fresh agent against `docs/plan-review-rubric.md`: **`docs/plan-review-phase-1-2026-09-06.md`**. It scored rows 3 (Executability) and 4 (Production parity) at **1** and found **four blocking defects**. All are applied below.
+>
+> **The lesson, recorded before the fixes:** revision 1 carried a twelve-row "Verified facts" table and five probes — and all four blockers were invisible to every one of them, because they were *static* checks (typechecks, `dist/` greps, registry dates). Each defect appears only when a request actually runs. **A typecheck is not a probe — run the request.** (`docs/learnings.md` L19.)
+>
+> | # | Defect | Fix applied |
+> |---|---|---|
+> | §3.1 | `usernameLower: required:true, input:false` → **every signup 400s**, `MISSING_FIELD`. Better Auth validates the request body *before* `databaseHooks` run, so a required field a client may not send is always missing. Hooks never execute | `required: false`. NOT NULL on the column remains the real guarantee. Independently re-verified against the memory adapter: `required:true` → 400, hooks `(NONE RAN)`; `required:false` → 200, `BEFORE \| AFTER usernameLower=alice_01` |
+> | §3.2 | The A02 guard keyed on `NODE_ENV`, so **`pnpm build` throws and `CI=1 pnpm e2e` cannot pass** — both run `NODE_ENV=production` on the laptop, which `CLAUDE.md` requires | Guard keys on a new **`APP_STAGE`** (PRD §7b's own axis), and no-ops when `NEXT_PHASE === 'phase-production-build'` |
+> | §3.3 | New env vars reached neither `next build` nor CI, and **CI had no Mailpit** — six e2e tests could never be green. L3 violated in the same document that cites it | All vars added to Turbo `build`/`dev`/`start`, to the CI `env:` block, and Mailpit added as a CI service |
+> | §3.4 | Better Auth ships **undocumented default special rate-limit rules** overriding the configured `max: 30`: `/sign-in*` and `/sign-up*` are **3 per 10s**, `/request-password-reset` **3 per 60s**. The suite does 11 signups from one shared bucket and would fail nondeterministically — surfacing as a mailer timeout, not a throttle | Explicit `customRules`, plus a per-test `x-forwarded-for` so each test gets its own bucket |
+>
+> High-priority items also applied: cookie test matches the `__Secure-` rename under `CI=1` (§4.1); the A10 leak test is production-only and skipped in dev, where tRPC deliberately attaches `data.stack` (§4.2); the username-availability oracle **actually gets** the rate limit spec §5 A06 claims it has (§4.3); auth logging is emitted for real events and stops logging email addresses (§4.4); `/verify-email` is reachable via `callbackURL` (§4.6); the false `inferAdditionalFields` runtime claim is corrected — it is a **compile-time-only shim** (§4.7); PRD §10 gains D1.4, D1.7, D1.9 (§4.8). Plus M1 (composite unique on `account`), M7 (pass `schema` to `drizzleAdapter`), M4 (duplicate-username UX).
+>
+> Two of my worries were checked and found **unfounded**, with evidence: the CSP breaks neither Turbopack HMR nor the Hocuspocus socket, and Playwright's `request` fixture is cookie-isolated but inherits `baseURL` — which is what those tests need.
+
 > **Spec:** `docs/superpowers/specs/2026-09-06-phase-1-auth-profile-design.md` (approved 2026-09-06). Decisions referenced as **D1.x**; OWASP controls as **A0x**.
 >
 > **Review gate:** this plan must pass `docs/plan-review-rubric.md` with no row scored 1 before execution, per `CLAUDE.md`.
@@ -1003,7 +1020,7 @@ Expected: PASS, 11 tests.
 
 ```ts
 import { db } from '@tripi/shared/db'
-import { userProfile } from '@tripi/shared/db/schema'
+import { schema, userProfile } from '@tripi/shared/db'
 import { webEnv } from '@tripi/shared/env'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
@@ -1020,7 +1037,9 @@ assertProductionAuthPosture({
 })
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db(), { provider: 'pg' }),
+  // Pass `schema` explicitly: the adapter otherwise relies on db._.fullSchema
+  // being populated by how createDb happens to be built — a silent coupling.
+  database: drizzleAdapter(db(), { provider: 'pg', schema }),
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.NEXT_PUBLIC_APP_URL,
   trustedOrigins: [env.NEXT_PUBLIC_APP_URL],
@@ -1051,7 +1070,12 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       username: { type: 'string', required: true, input: true },
-      usernameLower: { type: 'string', required: true, input: false, unique: true },
+      // required:false, NOT true. Better Auth validates additionalFields against
+      // the request BODY before databaseHooks run, so a `required` field the
+      // client is forbidden to send (input:false) is rejected as MISSING_FIELD
+      // and every signup 400s. NOT NULL on user.username_lower is the real
+      // guarantee. Verified: required:true -> 400, hooks never run.
+      usernameLower: { type: 'string', required: false, input: false, unique: true },
     },
   },
 
@@ -1066,6 +1090,15 @@ export const auth = betterAuth({
     enabled: env.RATE_LIMIT_ENABLED,
     window: 60,
     max: 30,
+    // Better Auth ships DEFAULT SPECIAL RULES that override the base for these
+    // paths: /sign-in* and /sign-up* are 3 per 10s, /request-password-reset is
+    // 3 per 60s. Undocumented defaults are not a security posture — state ours,
+    // or the e2e suite throttles itself from a single shared bucket.
+    customRules: {
+      '/sign-in/email': { window: 60, max: 10 },
+      '/sign-up/email': { window: 60, max: 20 },
+      '/request-password-reset': { window: 60, max: 20 },
+    },
   },
 
   advanced: {

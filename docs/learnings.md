@@ -140,3 +140,29 @@ A control matrix with ten green rows invites the belief that ten categories are 
 
 **Do:** every security summary carries an explicit "what this does not cover" section. Precision about limits is what makes the covered claims trustworthy.
 
+### L19 — A typecheck is not a probe. Run the request.
+
+**Believed:** Phase 1's plan followed "probe, don't assert" — it carried a twelve-row verified-facts table and five rerunnable probes, and correctly rejected a stale CLI and a same-day release on evidence.
+
+**True:** an independent review found **four blocking defects, and not one of them was visible to any of those probes.** Every probe was *static*: typechecks, `dist/` greps, registry dates, a `getAuthTables()` dump. Every defect appeared only when a request actually ran.
+
+- A Better Auth config that **typechecks perfectly** and returns 400 on every signup (`required: true` + `input: false` are mutually exclusive, because body validation precedes `databaseHooks`).
+- A configured `rateLimit: { max: 30 }` that is **never the limit in force** — undocumented default rules override it at 3 per 10s.
+- A boot guard that is correct in isolation and makes `pnpm build` fail, because it keyed on `NODE_ENV` when it meant "deployed".
+
+**Found out:** by a reviewer that drove `auth.handler` with real `Request` objects and ran `next build`, instead of reading types.
+
+**Do:** for anything with a *runtime contract* — request validation, middleware ordering, rate limits, framework lifecycle hooks — the probe is an executed request, not a compile. Types describe the shape of a call; they say nothing about whether the server accepts it. Static probes remain right for versions, module resolution, and bundle contents.
+
+### L20 — Configured is not in force
+
+`rateLimit: { window: 60, max: 30 }` reads like the limit. Better Auth's `getDefaultSpecialRules()` silently overrides it for exactly the paths that matter. The value we wrote was never the value applied, and nothing warned us.
+
+**Do:** for any security control with defaults, find what is *actually in force at the path you care about*, not what your config object says. Then state your own rules explicitly so the answer stops depending on a library's undocumented table. This is L17's sibling: L17 was a default whose value was wrong; this is a configured value that was never used.
+
+### L21 — Consider how a failure will *present*, not just whether it can happen
+
+The rate-limit collision would not have surfaced as "429 Too Many Requests". Because the forgot-password page deliberately discards the response (D1.9, a deliberate security choice), the UI would still say "Check your email", and the test would fail 15 seconds later in `waitForEmail` with `No email for … within 15000ms` — pointing squarely at the mailer, which was fine.
+
+**Do:** when a security decision hides information, ask what a failure downstream of it will look like. Deliberate opacity is right for attackers and expensive for debugging; note it where the opacity is introduced.
+

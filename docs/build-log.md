@@ -13,7 +13,7 @@
 | Phase | Goal | Status |
 |---|---|---|
 | 0 — Foundation | Monorepo, Docker, CI, vertical slice green from a production build | ✅ **Done 2026-09-05** |
-| 1 — Auth + Profile | Sign up, log in, edit profile | 🔨 In progress |
+| 1 — Auth + Profile | Sign up, log in, edit profile | ✅ **Done 2026-09-06** |
 | 2 — Trips/Days/Activities/Ideas | Full CRUD + drag-and-drop + ideas pool + place attachment | ⬜ |
 | 3 — Realtime Collab | Multi-user live editing via Yjs + Hocuspocus | ⬜ |
 | 4 — Invites + Roles | Owner/editor/viewer enforced end-to-end | ⬜ |
@@ -88,4 +88,58 @@ Thirteen commits. Eleven findings that the written plan did not predict — see 
 
 ## Phase 1 — Auth + Profile
 
-*In progress. Section written when the phase's Definition of Done passes.*
+**Done 2026-09-06** on branch `phase-1-auth-profile`.
+
+### In one sentence
+
+The house now has a front door with a lock, and a name on the doorbell.
+
+### What that means concretely
+
+People can create an account, prove they own the email address, get back in after forgetting the password, and say who they are. Every trip built in later phases will belong to one of these accounts.
+
+### What was built
+
+| Piece | Plain English |
+|---|---|
+| Better Auth + four identity tables | Accounts, sessions, credentials, one-time tokens |
+| `username` on the account row | Chosen at signup, unique, written in the *same insert* as the account — so you can never lose the name you picked between typing it and the account existing |
+| `user_profile` | Bio and home city, kept in a separate table so a hiccup there can never block a signup |
+| Mailer + escaped templates | Real emails, caught locally by Mailpit, with user-supplied text neutralised |
+| `protectedProcedure` | The single gate every private API call passes through. Phase 4's roles build on it |
+| Security headers, audit step, and the control tests | The OWASP work — see spec §5 |
+| `APP_STAGE` | A new environment axis: "can strangers reach this", separate from "is this a production build" |
+
+### Decisions that will outlive this phase
+
+- **Username is chosen at signup** (D1.1), which means we accept a username-enumeration oracle by design — and rate-limit it rather than pretend it isn't one.
+- **Username lives on the account row, not the profile** (D1.2). Signup is a single atomic insert and the unique index is the only arbiter, so an account is never created and *then* refused.
+- **The profile row can fail without consequence** (D1.4) and is repaired on first read.
+- **Verification emails are sent but don't gate login locally** (D1.5), so the pipeline is proven by a test rather than by a human clicking an inbox.
+- **Security posture keys on `APP_STAGE`, never `NODE_ENV`** — because a laptop runs `NODE_ENV=production` every time it builds.
+- **Undocumented library defaults are replaced with explicit rules.** Rate limits are stated, not inherited.
+
+### What proves it works
+
+| Evidence | Result |
+|---|---|
+| E2E against the **production build** (`turbo run start`) | **20 passed** |
+| E2E in dev mode | 19 passed, 1 skipped (A10 exists only on the production path) |
+| Unit tests | 54 passed (34 shared + 20 web) |
+| `pnpm build` | clean — the review found this impossible before the fix |
+| `pnpm audit --audit-level=high` | passes (1 moderate transitive dev advisory, no fix path) |
+| Posture guard | fires at `APP_STAGE=cloud`, allows `local` |
+
+### The part worth remembering
+
+An independent review of the plan — before any code was written — found **four blocking defects**, and scored two rubric rows at 1. Every one of them was invisible to the plan's own twelve-row "verified facts" table, because those checks were *static*: typechecks, package greps, registry dates.
+
+The sharpest was a Better Auth config that **compiles perfectly and returns HTTP 400 on every signup**. The phase would have been dead on arrival.
+
+Applying the review then surfaced a **fifth** error nobody had predicted, the instant a real request was sent.
+
+That is the phase's real lesson, and it is recorded as `docs/learnings.md` L19: **a typecheck is not a probe — run the request.**
+
+### Honest limits
+
+No TLS — everything is `http://localhost` until Stage 2, so `Secure` cookies and HSTS are not yet real. Nothing watches the auth logs; alerting is Stage 2–3. No SAST, no penetration test. Rate limits are per-instance and in-memory, and an unvalidated `x-forwarded-for` is honoured — fine on a laptop, a bypass the moment the app is reachable, so Stage 2 must set `trustedProxies`. Trip-level authorization does not exist until Phase 4. Signup still leaks membership on a duplicate email, which we accept alongside the username oracle.

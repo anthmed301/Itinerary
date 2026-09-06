@@ -135,7 +135,7 @@ Same 9 phases as before; each phase's exit criteria (in `docs/` and the original
 | Phase | Goal |
 |---|---|
 | 0 — Foundation | Monorepo, Docker, CI, vertical slice green from a **production build** (browser → tRPC → Postgres, and two-tab Yjs sync) — AWS deploy moved to Stage 2, see §10 (2026-09-05) — **done 2026-09-05** |
-| 1 — Auth + Profile | Sign up, log in, edit profile |
+| 1 — Auth + Profile | Sign up with a chosen username, log in, reset a forgotten password, edit profile — with OWASP Top 10:2025 controls under test (spec §5) — **done 2026-09-06** |
 | 2 — Trips/Days/Activities/Ideas | Full CRUD + drag-and-drop + ideas pool + place attachment |
 | 3 — Realtime Collab | Multi-user live editing via Yjs + Hocuspocus |
 | 4 — Invites + Roles | Owner/editor/viewer enforced end-to-end |
@@ -234,3 +234,8 @@ Things we *want*, deliberately not now. Unlike §5 (hard exclusions with a state
 | 2026-09-06 | Phase 1: rate limiting explicitly enabled, not left to the library default (D1.8) | Better Auth defaults to `enabled ?? isProduction` — off in development. Left alone, no local test could ever observe brute-force protection, and we would ship a control we had never run. |
 | 2026-09-06 | **Passwords are hashed with scrypt, not bcrypt** — `docs/security.md` §2.1 corrected | Verified in better-auth 1.7.1: `@better-auth/utils/password` uses `node:crypto` scrypt. The doc's advice to "bump the bcrypt cost factor to 12" was unactionable. |
 | 2026-09-06 | Security controls mapped to **OWASP Top 10:2025**, not the 2021 list | The 2025 list reorders materially: Injection is A05, Software Supply Chain Failures is new at A03, SSRF folded into A01, and A10 (Mishandling of Exceptional Conditions) is new. Mapping lives in the Phase 1 spec §5, with each control paired to the test that proves it. |
+| 2026-09-06 | Phase 1: `user_profile` is written by an after-hook that swallows failures, and repaired lazily on first read (D1.4) | A profile row carries nothing needed at signup, so a failure there must never block account creation. The repair path means a user can never be stuck without one. |
+| 2026-09-06 | Phase 1 pins `better-auth@1.7.1` and `nodemailer@9.0.5` (D1.7) | Version policy: newest release ≥2 weeks old with ≥1 patch on its major. `better-auth@1.7.3` shipped the morning the plan was written; `nodemailer@10.0.0` was two days old. |
+| 2026-09-06 | Phase 1: forgot-password responses are uniform whether or not the address exists (D1.9) | D1.1 already concedes a username oracle by design; the reset flow must not add an email oracle on top. Better Auth returns an identical body either way, and an e2e test compares the two responses byte for byte. |
+| 2026-09-06 | Added `APP_STAGE` (local/cloud/trusted/public) as the axis security posture keys on, replacing `NODE_ENV` | `next build` and `next start` both run `NODE_ENV=production` on a laptop, and `CLAUDE.md` requires both to run there — so a guard keyed on `NODE_ENV` makes the production path impossible to exercise. §7b already owned the right concept. Found by the Phase 1 plan review (§3.2). |
+| 2026-09-06 | Self-serve account deletion moves from v1 (§4.1) to v2 | Not required for a trusted-circle launch and it interacts with fork attribution and public Explore content, which do not exist until Phases 6. Revisit before Stage 4. Flagged by the plan review (M13) as a PRD deviation that had no home. |

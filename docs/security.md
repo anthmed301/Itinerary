@@ -50,7 +50,7 @@ export const auth = betterAuth({
   rateLimit: { window: 60, max: 60 },     // built-in; ours adds tRPC layer too
   trustedOrigins: [env.PUBLIC_APP_URL],
   advanced: {
-    cookiePrefix: 'tripi',
+    cookiePrefix: 'tether',
     useSecureCookies: env.NODE_ENV === 'production',
   },
 })
@@ -59,7 +59,7 @@ export const auth = betterAuth({
 ### 2.1 Password requirements
 - ≥ 10 characters.
 - Score ≥ 3 from zxcvbn (client-side). Server enforces minimum length only; we don't reject on entropy because it leads to bad UX. Strong-meter is informational.
-- Better Auth uses bcrypt under the hood (cost factor 11 default — verify and bump to 12 if Apple silicon makes it cheap).
+- Better Auth hashes with **scrypt** via `node:crypto` (`@better-auth/utils/password`), not bcrypt. Verified against `better-auth@1.7.1` on 2026-09-06; an earlier draft of this doc said bcrypt and advised tuning a cost factor that does not exist. scrypt parameters are the library's defaults; revisit only with a benchmark, not by analogy to bcrypt.
 
 ### 2.2 Email verification
 - Required before any social action (publish, comment, follow).
@@ -150,7 +150,7 @@ This avoids leaking token-less unlisted URLs. The "Copy share link" button gener
 
 ## 5. Username security
 
-- Reserved list (case-insensitive): `admin`, `tripi`, `support`, `help`, `api`, `auth`, `login`, `signup`, `settings`, `explore`, `trips`, `profile`, `terms`, `privacy`, `home`, `app`, `www`, `mail`, `team`. Stored in `apps/web/src/server/auth/reserved-usernames.ts`.
+- Reserved list (case-insensitive): `admin`, `tether`, `support`, `help`, `api`, `auth`, `login`, `signup`, `settings`, `explore`, `trips`, `profile`, `terms`, `privacy`, `home`, `app`, `www`, `mail`, `team`. Stored in `apps/web/src/server/auth/reserved-usernames.ts`.
 - Username pattern: `/^[a-z0-9_]{3,32}$/i`. No leading/trailing underscores.
 - Stored canonicalized as `username_lower` (lowercase) for uniqueness; original case preserved for display.
 - Changing username: allowed once per 30 days (prevents impersonation churn). Old username goes into a 90-day reservation pool before being claimable again.
@@ -166,7 +166,7 @@ Categories:
 | Gemini API key | AWS Secrets Manager | App only (server-side AI calls) |
 | Tavily API key | AWS Secrets Manager | App only |
 | Foursquare API key | AWS Secrets Manager | App only |
-| Mapbox **public** token | env var, restricted to `tripi.app` domain | App + client |
+| Mapbox **public** token | env var, restricted to `tether.app` domain | App + client |
 | SES SMTP creds | AWS Secrets Manager | App only |
 | S3 access | IAM role (no static keys) | App's ECS task role |
 

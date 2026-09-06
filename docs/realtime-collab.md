@@ -52,7 +52,7 @@ export function getDays(doc: Y.Doc): Y.Array<Y.Map<unknown>> { return doc.getArr
 **Connection lifecycle:**
 
 1. Client requests a Yjs JWT from Next.js: `POST /api/hocuspocus/token { tripId }`. Server verifies trip access, returns a short-lived (30 min) JWT containing `userId`, `tripId`, `role`, `displayName`, `avatarKey`.
-2. Client opens `wss://realtime.tripi.app/?token=…` (or local equivalent).
+2. Client opens `wss://realtime.tether.app/?token=…` (or local equivalent).
 3. Hocuspocus `onAuthenticate` validates the JWT signature and parameters; rejects mismatched `tripId` or expired tokens.
 4. `onLoadDocument` either loads from in-memory cache or rehydrates from Postgres (see §3).
 5. The doc is broadcast as the initial state; client's local Yjs doc applies it.
@@ -161,7 +161,7 @@ The DnD spec lives in `docs/design-system.md` §7; here we cover how it talks to
 // In a React component (apps/web/src/components/trip/ActivityCard.tsx)
 import { useYDoc } from '@/lib/yjs/provider'
 import { generateKeyBetween } from 'fractional-indexing'
-import { getActivities, getDays } from '@tripi/yjs-schema'
+import { getActivities, getDays } from '@tether/yjs-schema'
 
 function onDragEnd(event) {
   const doc = useYDoc()

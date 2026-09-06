@@ -30,9 +30,9 @@
           "level": "error",
           "options": {
             "paths": {
-              "@tripi/shared/db": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
-              "@tripi/shared/db/schema": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
-              "@tripi/shared/env": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**."
+              "@tether/shared/db": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
+              "@tether/shared/db/schema": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
+              "@tether/shared/env": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**."
             }
           }
         }

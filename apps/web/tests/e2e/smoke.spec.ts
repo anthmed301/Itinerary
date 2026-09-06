@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test('renders and reaches postgres through tRPC', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: 'Tripi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tether' })).toBeVisible()
   await expect(page.getByTestId('db-status')).toHaveText('database: up')
   await expect(page.getByTestId('place-count')).toContainText('places cached:')
 })

@@ -1,6 +1,6 @@
-# Tripi — Product Requirements Document
+# Tether — Product Requirements Document
 
-> **Audience:** internal only (solo build). This is the single product-level source of truth: why Tripi exists, who it's for, what v1 must do, and how we'll know it worked. Technical depth (schemas, APIs, infra) lives in `docs/` and should never contradict this file — if it does, this file wins and `docs/` gets updated.
+> **Audience:** internal only (solo build). This is the single product-level source of truth: why Tether exists, who it's for, what v1 must do, and how we'll know it worked. Technical depth (schemas, APIs, infra) lives in `docs/` and should never contradict this file — if it does, this file wins and `docs/` gets updated.
 >
 > Supersedes `PLAN.md` (retired — see stub).
 
@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-Trip planning today happens in Google Sheets: no structure, clunky sharing, no place data, no help drafting, and nothing useful once the trip actually starts. **Tripi is the trip-planning document — collaborative, AI-aware, and alive during the trip itself — that finally replaces the spreadsheet.**
+Trip planning today happens in Google Sheets: no structure, clunky sharing, no place data, no help drafting, and nothing useful once the trip actually starts. **Tether is the trip-planning document — collaborative, AI-aware, and alive during the trip itself — that finally replaces the spreadsheet.**
 
 It's a first-class, collaboratively-edited, AI-assisted trip document that quietly turns into a live travel companion the moment the trip starts, with a social layer so good trips are discoverable and reusable.
 
@@ -30,11 +30,11 @@ This is personal-use software, not a growth product — metrics are about whethe
 
 | Goal | What "succeeded" looks like |
 |---|---|
-| **Real usage** | You plan and run an actual real trip in Tripi, start to finish, instead of Sheets. |
+| **Real usage** | You plan and run an actual real trip in Tether, start to finish, instead of Sheets. |
 | **Real collaboration** | At least one real friend or family member — not a test account — plans or views a trip with you and the invite/collab flow holds up under real conditions. |
 | **Fast & reliable** | Drag-and-drop and realtime sync feel instant with no lag or sync bugs; AI never silently inserts wrong information (all AI place suggestions round-trip through Foursquare verification per `docs/ai-integration.md`). |
 | **Secure & cost-efficient** | The authz model in `docs/security.md` holds up in practice; spend tracks the cost ladder in `docs/ops.md` §7 with no surprise bills; no security incidents. |
-| **Doesn't block the App Store goal** | You intend to eventually ship Tripi as an iOS app on the App Store (§8). v1's data model, auth, and API should stay reusable by a future native client — this is a *constraint* on how v1 is built, not a v1 deliverable. |
+| **Doesn't block the App Store goal** | You intend to eventually ship Tether as an iOS app on the App Store (§8). v1's data model, auth, and API should stay reusable by a future native client — this is a *constraint* on how v1 is built, not a v1 deliverable. |
 
 ## 4. v1 scope — functional requirements
 
@@ -64,7 +64,7 @@ Organized by feature area. Each area maps to a phase in §7; exit criteria there
 - Owner can invite by username (in-app) or signed email link.
 - Roles: Owner / Editor / Viewer, enforced at both the API layer and the realtime layer.
 - Exactly one owner per trip. The owner can transfer ownership to another member, and cannot leave or be removed without transferring first.
-- Email invites are single-use and expire after 7 days. If the email already belongs to a Tripi account, the invite also appears in-app. Accepting requires being signed in; the link is the capability, so any signed-in account may accept it. Re-inviting an existing member or a pending email returns the existing state rather than creating a duplicate.
+- Email invites are single-use and expire after 7 days. If the email already belongs to a Tether account, the invite also appears in-app. Accepting requires being signed in; the link is the capability, so any signed-in account may accept it. Re-inviting an existing member or a pending email returns the existing state rather than creating a duplicate.
 
 ### 4.5 AI Assistance
 - **Suggester** — proposes activity cards for a day (draggable, not auto-inserted).
@@ -135,7 +135,7 @@ Same 9 phases as before; each phase's exit criteria (in `docs/` and the original
 | Phase | Goal |
 |---|---|
 | 0 — Foundation | Monorepo, Docker, CI, vertical slice green from a **production build** (browser → tRPC → Postgres, and two-tab Yjs sync) — AWS deploy moved to Stage 2, see §10 (2026-09-05) — **done 2026-09-05** |
-| 1 — Auth + Profile | Sign up, log in, edit profile |
+| 1 — Auth + Profile | Sign up with a chosen username, log in, reset a forgotten password, edit profile — with OWASP Top 10:2025 controls under test (spec §5) — **done 2026-09-06** |
 | 2 — Trips/Days/Activities/Ideas | Full CRUD + drag-and-drop + ideas pool + place attachment |
 | 3 — Realtime Collab | Multi-user live editing via Yjs + Hocuspocus |
 | 4 — Invites + Roles | Owner/editor/viewer enforced end-to-end |
@@ -226,3 +226,16 @@ Things we *want*, deliberately not now. Unlike §5 (hard exclusions with a state
 | 2026-09-05 | Added §7b stage gates | Wanted explicit, checklist-style triggers for local → cloud → trusted users → public, separate from the feature phases. |
 | 2026-09-05 | Phase 0 no longer includes an AWS deploy; cloud entry is Stage 2 per §7b | Avoids building deploy plumbing before there is anything to deploy. Phase 0 instead proves the production path locally: `pnpm build` and every service's `start` script run in CI from this phase onward, and the e2e suite runs against the built artefacts rather than dev servers. |
 | 2026-09-05 | Local Postgres is on host port **5433**, not 5432 | A Homebrew `postgresql@17` service (database `album_app`) owns 5432 on the dev machine and auto-starts at login. Remapping leaves that project working and cannot re-collide; stopping it would break an unrelated app every reboot. CI uses 5433 too, so `DATABASE_URL` is byte-identical in both environments. |
+| 2026-09-06 | Phase 1: username is chosen at signup, not auto-generated (D1.1) | Users get the identity they want at the moment they care. Cost: an availability-check endpoint, and a username enumeration oracle we accept and rate-limit. |
+| 2026-09-06 | Phase 1: `username` lives on Better Auth's `user` table, not `user_profile` (D1.2) | Makes signup a single atomic insert, so we can never create an account and then fail on a taken name. Deviates from `docs/data-model.md` §2.1; verified supported in better-auth 1.7.1 by typechecking a real config. |
+| 2026-09-06 | Phase 1: display name is Better Auth's `user.name` (D1.3) | Avoids two competing name columns. Deviates from `docs/data-model.md` §2.1. |
+| 2026-09-06 | Phase 1: verification emails are sent but login is not gated on them locally (D1.5) | Proves the email pipeline in an automated test without a human clicking an inbox on every signup. Gate turns on at Stage 2, as §7b already specified. |
+| 2026-09-06 | Phase 1 includes password reset, though §7 says only "sign up, log in, edit profile" (D1.6) | Shares all email plumbing with verification; splitting them means rebuilding the context in a later phase. |
+| 2026-09-06 | Phase 1: rate limiting explicitly enabled, not left to the library default (D1.8) | Better Auth defaults to `enabled ?? isProduction` — off in development. Left alone, no local test could ever observe brute-force protection, and we would ship a control we had never run. |
+| 2026-09-06 | **Passwords are hashed with scrypt, not bcrypt** — `docs/security.md` §2.1 corrected | Verified in better-auth 1.7.1: `@better-auth/utils/password` uses `node:crypto` scrypt. The doc's advice to "bump the bcrypt cost factor to 12" was unactionable. |
+| 2026-09-06 | Security controls mapped to **OWASP Top 10:2025**, not the 2021 list | The 2025 list reorders materially: Injection is A05, Software Supply Chain Failures is new at A03, SSRF folded into A01, and A10 (Mishandling of Exceptional Conditions) is new. Mapping lives in the Phase 1 spec §5, with each control paired to the test that proves it. |
+| 2026-09-06 | Phase 1: `user_profile` is written by an after-hook that swallows failures, and repaired lazily on first read (D1.4) | A profile row carries nothing needed at signup, so a failure there must never block account creation. The repair path means a user can never be stuck without one. |
+| 2026-09-06 | Phase 1 pins `better-auth@1.7.1` and `nodemailer@9.0.5` (D1.7) | Version policy: newest release ≥2 weeks old with ≥1 patch on its major. `better-auth@1.7.3` shipped the morning the plan was written; `nodemailer@10.0.0` was two days old. |
+| 2026-09-06 | Phase 1: forgot-password responses are uniform whether or not the address exists (D1.9) | D1.1 already concedes a username oracle by design; the reset flow must not add an email oracle on top. Better Auth returns an identical body either way, and an e2e test compares the two responses byte for byte. |
+| 2026-09-06 | Added `APP_STAGE` (local/cloud/trusted/public) as the axis security posture keys on, replacing `NODE_ENV` | `next build` and `next start` both run `NODE_ENV=production` on a laptop, and `CLAUDE.md` requires both to run there — so a guard keyed on `NODE_ENV` makes the production path impossible to exercise. §7b already owned the right concept. Found by the Phase 1 plan review (§3.2). |
+| 2026-09-06 | Self-serve account deletion moves from v1 (§4.1) to v2 | Not required for a trusted-circle launch and it interacts with fork attribution and public Explore content, which do not exist until Phases 6. Revisit before Stage 4. Flagged by the plan review (M13) as a PRD deviation that had no home. |

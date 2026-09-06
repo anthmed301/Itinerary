@@ -1,7 +1,7 @@
 'use client'
 
 import { HocuspocusProvider } from '@hocuspocus/provider'
-import { docNameForTrip } from '@tripi/shared'
+import { docNameForTrip } from '@tether/shared'
 import { useEffect, useState } from 'react'
 import * as Y from 'yjs'
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { getMeta } from '@tripi/shared'
+import { getMeta } from '@tether/shared'
 import { useEffect, useState } from 'react'
 import { useTripDoc } from '@/lib/use-trip-doc'
 

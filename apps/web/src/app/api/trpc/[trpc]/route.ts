@@ -7,7 +7,9 @@ function handler(req: Request) {
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext,
+    // Without the headers the session cookie never reaches getSession and every
+    // request looks anonymous.
+    createContext: () => createContext({ headers: req.headers }),
   })
 }
 

@@ -1,4 +1,4 @@
-# Tripi
+# Tether
 
 The trip-planning document that replaces the spreadsheet. Collaborative, AI-aware,
 and alive during the trip itself.

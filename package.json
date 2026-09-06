@@ -1,5 +1,5 @@
 {
-  "name": "tripi",
+  "name": "tether",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.25.0",
@@ -18,9 +18,9 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && pnpm db:up && pnpm db:migrate",
-    "db:generate": "pnpm --filter @tripi/shared db:generate",
-    "db:migrate": "pnpm --filter @tripi/shared db:migrate",
-    "e2e": "pnpm --filter @tripi/web e2e"
+    "db:generate": "pnpm --filter @tether/shared db:generate",
+    "db:migrate": "pnpm --filter @tether/shared db:migrate",
+    "e2e": "pnpm --filter @tether/web e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",

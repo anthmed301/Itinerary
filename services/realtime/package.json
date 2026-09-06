@@ -1,5 +1,5 @@
 {
-  "name": "@tripi/realtime",
+  "name": "@tether/realtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@hocuspocus/server": "4.6.0",
-    "@tripi/shared": "workspace:*",
+    "@tether/shared": "workspace:*",
     "pino": "10.3.1",
     "yjs": "13.6.32"
   },

@@ -53,29 +53,29 @@ Add `apps/web/.env.local` to `.gitignore` (the existing `.env.local` pattern alr
 
 ### 3.2 Client components pull the Postgres driver into the browser bundle
 
-`RealtimeCounter.tsx` and `use-trip-doc.ts` are `'use client'` modules that import `getMeta` and `docNameForTrip` from `@tripi/shared`. That barrel (`packages/shared/src/index.ts`, Task 4 Step 4 onward) re-exports `db` and `createDb` from `db/client.ts`, which imports `postgres` and `drizzle-orm/postgres-js`. Bundling a client component therefore bundles the Node Postgres driver: Turbopack fails on `net`/`tls`/`crypto` resolution, and if it did not, the browser bundle would carry a database client. Task 9 Step 8 fails.
+`RealtimeCounter.tsx` and `use-trip-doc.ts` are `'use client'` modules that import `getMeta` and `docNameForTrip` from `@tether/shared`. That barrel (`packages/shared/src/index.ts`, Task 4 Step 4 onward) re-exports `db` and `createDb` from `db/client.ts`, which imports `postgres` and `drizzle-orm/postgres-js`. Bundling a client component therefore bundles the Node Postgres driver: Turbopack fails on `net`/`tls`/`crypto` resolution, and if it did not, the browser bundle would carry a database client. Task 9 Step 8 fails.
 
 The plan already defines the subpath exports that fix this (`./db`, `./yjs`) and then never uses them.
 
 **Patch.**
 
-1. The root barrel exports only browser-safe code: the Yjs helpers and types. Remove `createDb`, `db`, `schema`, `place`, `placeIsStale` from `index.ts`. Server code imports `@tripi/shared/db` and `@tripi/shared/env`; add `"./env": "./src/env.ts"` to the exports map. Rename `"./schema"` to `"./db/schema"` so the word "schema" is not shared between the DB and Yjs subpaths.
-2. Enforce it with Biome rather than prose. In `biome.json`, under `linter.rules.style`, add `noRestrictedImports` with `@tripi/shared/db` and `@tripi/shared/env` restricted, then override it to allow those paths for `apps/web/src/server/**`, `apps/web/src/app/api/**`, and `services/realtime/**` using a `overrides` block. Client code that reaches for the database then fails lint, not the browser.
+1. The root barrel exports only browser-safe code: the Yjs helpers and types. Remove `createDb`, `db`, `schema`, `place`, `placeIsStale` from `index.ts`. Server code imports `@tether/shared/db` and `@tether/shared/env`; add `"./env": "./src/env.ts"` to the exports map. Rename `"./schema"` to `"./db/schema"` so the word "schema" is not shared between the DB and Yjs subpaths.
+2. Enforce it with Biome rather than prose. In `biome.json`, under `linter.rules.style`, add `noRestrictedImports` with `@tether/shared/db` and `@tether/shared/env` restricted, then override it to allow those paths for `apps/web/src/server/**`, `apps/web/src/app/api/**`, and `services/realtime/**` using a `overrides` block. Client code that reaches for the database then fails lint, not the browser.
 3. Do not use the `server-only` package inside `packages/shared`: it throws on import outside a React Server environment, which breaks the realtime service.
 
-Update the "Responsibility boundaries" list to say: "Client components import `@tripi/shared` (browser-safe) only; `@tripi/shared/db` and `@tripi/shared/env` are lint-restricted to server directories."
+Update the "Responsibility boundaries" list to say: "Client components import `@tether/shared` (browser-safe) only; `@tether/shared/db` and `@tether/shared/env` are lint-restricted to server directories."
 
 ### 3.3 The realtime service's production path is broken and never exercised
 
-**Verified.** `services/realtime` builds with `tsc` and starts with `node dist/server.js`. `tsc` emits only the service's own files; `@tripi/shared` is resolved through `node_modules` and treated as an external library, so nothing from it is emitted. At runtime Node resolves `@tripi/shared` to `packages/shared/src/index.ts` and applies type stripping, which requires explicit `.ts` extensions on relative imports. The plan's `./env`, `./db/client`, `./yjs/schema` imports are extensionless, so Node throws `ERR_MODULE_NOT_FOUND` on the first line of the barrel. Probe in §6.3 reproduces it with two files.
+**Verified.** `services/realtime` builds with `tsc` and starts with `node dist/server.js`. `tsc` emits only the service's own files; `@tether/shared` is resolved through `node_modules` and treated as an external library, so nothing from it is emitted. At runtime Node resolves `@tether/shared` to `packages/shared/src/index.ts` and applies type stripping, which requires explicit `.ts` extensions on relative imports. The plan's `./env`, `./db/client`, `./yjs/schema` imports are extensionless, so Node throws `ERR_MODULE_NOT_FOUND` on the first line of the barrel. Probe in §6.3 reproduces it with two files.
 
 Nothing runs `pnpm build`, `next build`, `next start`, or the realtime `start` script anywhere in the plan, CI, or the Definition of done. That also leaves three other claims untested: `force-dynamic` preventing a build-time database call, `transpilePackages` working under `next build`, and TypeScript 7 working with Next's build-time type check (it does, see §4.3, but the plan never finds out).
 
 **Patch.**
 
-1. Bundle the realtime service so its artefact is self-contained. Replace `"build": "tsc"` with `tsdown` (`tsdown@0.23.0`, the maintained successor to tsup): `"build": "tsdown src/server.ts --format esm --platform node --no-external @tripi/shared"` and `"start": "node --env-file-if-exists=../../.env.local dist/server.mjs"`. Keep `tsc --noEmit` for `typecheck`. Remove `outDir`/`rootDir` from its tsconfig. This also becomes the Dockerfile's build step at Stage 2 unchanged.
+1. Bundle the realtime service so its artefact is self-contained. Replace `"build": "tsc"` with `tsdown` (`tsdown@0.23.0`, the maintained successor to tsup): `"build": "tsdown src/server.ts --format esm --platform node --no-external @tether/shared"` and `"start": "node --env-file-if-exists=../../.env.local dist/server.mjs"`. Keep `tsc --noEmit` for `typecheck`. Remove `outDir`/`rootDir` from its tsconfig. This also becomes the Dockerfile's build step at Stage 2 unchanged.
 2. Add a Task 11 step and a CI step, before e2e: `pnpm build`. Then run e2e against the built output in CI: in `playwright.config.ts`, `command: process.env.CI ? 'pnpm start' : 'pnpm dev'`, with a root `"start": "turbo run start"` script and `turbo.json` `start` task marked `persistent`, `cache: false`, `dependsOn: ["build"]`. Locally `pnpm dev` stays the default so the hot-reload loop is unchanged.
-3. Add to the Definition of done: `pnpm build` succeeds, and `pnpm --filter @tripi/realtime start` logs `realtime server listening` from the built file.
+3. Add to the Definition of done: `pnpm build` succeeds, and `pnpm --filter @tether/realtime start` logs `realtime server listening` from the built file.
 
 ## 4. High-priority findings
 
@@ -243,7 +243,7 @@ Revision 2 of `docs/superpowers/plans/2026-09-05-phase-0-foundation.md` applies 
 
 Two of this review's own patches were wrong, and one of its premises was half wrong. Recorded here because rubric row 2 applies to reviews as well as plans.
 
-1. **§3.3's tsdown command does not work.** `--no-external` is not a tsdown flag. The nearest CLI equivalent, `--deps.always-bundle`, is accepted without error and has **no effect**: the build succeeds, `@tripi/shared` stays external, and the artefact fails with the same `ERR_MODULE_NOT_FOUND` the patch was written to fix — a silent no-op, which is worse than an error. Only `tsdown.config.ts` with `deps: { alwaysBundle: [...] }` works. Probe P3.
+1. **§3.3's tsdown command does not work.** `--no-external` is not a tsdown flag. The nearest CLI equivalent, `--deps.always-bundle`, is accepted without error and has **no effect**: the build succeeds, `@tether/shared` stays external, and the artefact fails with the same `ERR_MODULE_NOT_FOUND` the patch was written to fix — a silent no-op, which is worse than an error. Only `tsdown.config.ts` with `deps: { alwaysBundle: [...] }` works. Probe P3.
 2. **§3.3's tsdown pin violates §4.3's own policy.** `tsdown@0.23.0` published 2026-09-03: two days old, no patch. The policy this review wrote in §4.3 selects `0.22.14` (2026-07-23). The plan pins `0.22.14`.
 3. **§4.7's premise is half wrong.** Node 24.20.0 *is* installed under nvm, but the active `node` is still v23.6.0 from Homebrew and **pnpm is not installed at all**, so Task 0 was not merely restating stale facts — it had real work. The finding's *conclusion* stands and is applied: machine state moved into `pnpm doctor`, which moved from Task 11 to Task 1.
 

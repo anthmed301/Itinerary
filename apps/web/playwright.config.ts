@@ -10,6 +10,11 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    // Better Auth buckets rate limits on `${ip}|${path}`, and its getIP reads
+    // only x-forwarded-for — falling back to ONE shared key when the header is
+    // absent. Without this the whole suite shares a single bucket and throttles
+    // itself nondeterministically. Review §3.4.
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.1' },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

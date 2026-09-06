@@ -2,7 +2,7 @@
 
 > The view that activates when a trip starts. Day-by-day timeline with current/next activity, per-activity check-ins, and opt-in shared live location among collaborators. **No group chat in v1.**
 
-This is the feature most travel apps don't have. Most die after the booking step; Tripi keeps earning attention during the trip itself.
+This is the feature most travel apps don't have. Most die after the booking step; Tether keeps earning attention during the trip itself.
 
 ---
 
@@ -189,7 +189,7 @@ This phase is implicitly the social engagement loop — a trip becomes most post
 
 ## 10. What "great" looks like
 
-A user opens Tripi the morning of Day 1. They see today's plan, current activity highlighted, the map pre-zoomed to the right neighborhood. They tap "Check in" when they arrive at coffee. Their travel partner, on their own phone, sees their pin appear with a soft pulse. At 10am, the next activity card auto-promotes to NOW. They check in. Etc. After the trip, the recap is pre-written by their own actions; one tap publishes it.
+A user opens Tether the morning of Day 1. They see today's plan, current activity highlighted, the map pre-zoomed to the right neighborhood. They tap "Check in" when they arrive at coffee. Their travel partner, on their own phone, sees their pin appear with a soft pulse. At 10am, the next activity card auto-promotes to NOW. They check in. Etc. After the trip, the recap is pre-written by their own actions; one tap publishes it.
 
 ## 11. What's deliberately NOT in v1 trip-mode
 

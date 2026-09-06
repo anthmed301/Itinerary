@@ -1,4 +1,4 @@
-import { countPlaces } from '@tripi/shared/db'
+import { countPlaces } from '@tether/shared/db'
 import { publicProcedure, router } from '../init'
 
 export const healthRouter = router({

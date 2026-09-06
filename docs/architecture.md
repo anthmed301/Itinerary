@@ -39,7 +39,7 @@
 ## 2. Monorepo layout
 
 ```
-tripi/
+tether/
   package.json                    # root, workspaces, turbo
   pnpm-workspace.yaml
   turbo.json

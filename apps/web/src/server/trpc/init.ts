@@ -1,4 +1,4 @@
-import { type Database, db } from '@tripi/shared/db'
+import { type Database, db } from '@tether/shared/db'
 import { initTRPC, TRPCError } from '@trpc/server'
 import superjson from 'superjson'
 

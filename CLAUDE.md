@@ -1,4 +1,4 @@
-# Tripi
+# Tether
 
 Trip-planning web app. Replaces Google-Sheets planning with a focused, AI-aware document. Real-time collaborative; social Explore; trip-mode that activates when travel starts.
 
@@ -69,9 +69,9 @@ Three units, not the eight in `docs/architecture.md` §2:
 Docker runs postgres + minio + mailpit only.
 
 ## Server/client boundary
-`@tripi/shared` (the barrel) is **browser-safe** and must stay that way: it re-exports types and
-the Yjs helpers, nothing else. `@tripi/shared/env`, `@tripi/shared/db`, and
-`@tripi/shared/db/schema` are server-only, restricted by Biome `noRestrictedImports` to
+`@tether/shared` (the barrel) is **browser-safe** and must stay that way: it re-exports types and
+the Yjs helpers, nothing else. `@tether/shared/env`, `@tether/shared/db`, and
+`@tether/shared/db/schema` are server-only, restricted by Biome `noRestrictedImports` to
 `apps/web/src/server/**`, `apps/web/src/app/api/**`, and `services/realtime/**`.
 
 - Never re-export db or env from the barrel — that is what puts the Postgres driver in the browser bundle.
@@ -84,7 +84,7 @@ the Yjs helpers, nothing else. `@tripi/shared/env`, `@tripi/shared/db`, and
 - **`pnpm preflight`, never `pnpm doctor`** — pnpm 11's built-in `doctor` shadows the script and reports green regardless.
 - **`pnpm-workspace.yaml` needs `allowBuilds`** for `lefthook` and `esbuild`; pnpm 11 blocks install scripts by default and their binaries silently never appear.
 - **`agentRules: false` in `next.config.ts`** — Next 16 otherwise generates `apps/web/AGENTS.md` and `apps/web/CLAUDE.md` on first dev run, competing with this file.
-- **tsdown's `deps.alwaysBundle` must be a RegExp** (`/^@tripi\/shared(\/.*)?$/`). A bare string matches only the exact specifier and leaves subpath imports external — and the resulting artefact still *runs* today, breaking later in Phase 3. Check the bundle content, not the exit code.
+- **tsdown's `deps.alwaysBundle` must be a RegExp** (`/^@tether\/shared(\/.*)?$/`). A bare string matches only the exact specifier and leaves subpath imports external — and the resulting artefact still *runs* today, breaking later in Phase 3. Check the bundle content, not the exit code.
 
 ## Phase 0 conventions
 - Lint and format is Biome (`pnpm lint`, `pnpm format`). No ESLint, no Prettier. Generated output (`packages/shared/migrations`) is excluded — never lint what a generator rewrites.

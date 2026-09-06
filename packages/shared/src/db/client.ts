@@ -16,7 +16,7 @@ export function createDb(connectionString: string = coreEnv().DATABASE_URL, max 
 // Next re-evaluates modules on every hot reload, so a module-scoped variable does
 // not survive one. globalThis does. Production gets a plain module singleton
 // because there is no reload to survive.
-const globalForDb = globalThis as typeof globalThis & { __tripiDb?: Database }
+const globalForDb = globalThis as typeof globalThis & { __tetherDb?: Database }
 
 let cached: Database | undefined
 
@@ -25,8 +25,8 @@ export function db(): Database {
     cached ??= createDb()
     return cached
   }
-  globalForDb.__tripiDb ??= createDb()
-  return globalForDb.__tripiDb
+  globalForDb.__tetherDb ??= createDb()
+  return globalForDb.__tetherDb
 }
 
 /**

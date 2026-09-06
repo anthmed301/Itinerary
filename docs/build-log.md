@@ -1,4 +1,4 @@
-# Tripi — Build Log
+# Tether — Build Log
 
 > What was actually built, phase by phase, in plain language. This is the source for the end-of-build walkthrough: each entry says what shipped, why it mattered, and what proves it works.
 >

@@ -113,7 +113,7 @@ export const suggesterPromptV1 = (input: {
   dayContext: DayContext       // dayId, date, existing activities on this day, travel style
   userNeed: string             // "We want food + low-key things in Shimokitazawa"
 }) => `
-You are Tripi, a thoughtful travel planner. Suggest 5 activities for a single day.
+You are Tether, a thoughtful travel planner. Suggest 5 activities for a single day.
 
 # Trip
 ${formatTripContext(input.tripContext)}
@@ -237,7 +237,7 @@ Every suggested place goes through `placeLookup` (Foursquare). If Foursquare ret
 We strip claims like "open until 11pm" from titles and notes unless they came from `placeLookup`. The model can suggest categories ("dinner") but not facts ("open 8am-2am").
 
 ### 6.3 Disclosure UI
-AI-generated activities show a sparkle icon and a "Created by Tripi AI · Verify before booking" label until the user manually edits. The label disappears on edit.
+AI-generated activities show a sparkle icon and a "Created by Tether AI · Verify before booking" label until the user manually edits. The label disappears on edit.
 
 ## 7. Cost guardrails
 
@@ -290,7 +290,7 @@ User-controlled content (trip title, activity notes) flows into prompts. To prev
 
 | Failure | Symptom | Handling |
 |---|---|---|
-| Gemini rate limit | 429 from Google | Retry once after 30s; surface to user as "Tripi is thinking hard, try again in a moment" |
+| Gemini rate limit | 429 from Google | Retry once after 30s; surface to user as "Tether is thinking hard, try again in a moment" |
 | Tavily 5xx | Tool returns error | Continue without web search; note in result rationale |
 | Foursquare 0 hits | place not verified | Drop from suggestions; if all 5 dropped, retry with broader query |
 | Schema parse failure | model returned invalid JSON | Retry once with stronger instruction; if still bad, return generic error |

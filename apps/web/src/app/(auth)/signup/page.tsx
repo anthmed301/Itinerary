@@ -1,6 +1,6 @@
 'use client'
 
-import { validateUsername } from '@tripi/shared'
+import { validateUsername } from '@tether/shared'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useEffect, useState } from 'react'
 import { AuthForm, Field } from '@/components/AuthForm'
@@ -69,7 +69,7 @@ export default function SignupPage() {
 
   return (
     <AuthForm
-      title="Create your Tripi account"
+      title="Create your Tether account"
       submitLabel="Sign up"
       error={error}
       pending={pending}

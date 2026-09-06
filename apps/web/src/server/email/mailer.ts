@@ -1,4 +1,4 @@
-import { webEnv } from '@tripi/shared/env'
+import { webEnv } from '@tether/shared/env'
 import nodemailer from 'nodemailer'
 import { type AuthEvent, authLog } from '../log'
 import type { Email } from './templates'

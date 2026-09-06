@@ -1,7 +1,7 @@
-import { validateUsername } from '@tripi/shared'
-import { db, schema } from '@tripi/shared/db'
-import { userProfile } from '@tripi/shared/db/schema'
-import { webEnv } from '@tripi/shared/env'
+import { validateUsername } from '@tether/shared'
+import { db, schema } from '@tether/shared/db'
+import { userProfile } from '@tether/shared/db/schema'
+import { webEnv } from '@tether/shared/env'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { sendEmail } from '../email/mailer'
@@ -94,7 +94,7 @@ export const auth = betterAuth({
   },
 
   advanced: {
-    cookiePrefix: 'tripi',
+    cookiePrefix: 'tether',
     useSecureCookies: env.NODE_ENV === 'production',
   },
 

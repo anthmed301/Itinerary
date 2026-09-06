@@ -1,6 +1,6 @@
-# Tripi — Product Requirements Document
+# Tether — Product Requirements Document
 
-> **Audience:** internal only (solo build). This is the single product-level source of truth: why Tripi exists, who it's for, what v1 must do, and how we'll know it worked. Technical depth (schemas, APIs, infra) lives in `docs/` and should never contradict this file — if it does, this file wins and `docs/` gets updated.
+> **Audience:** internal only (solo build). This is the single product-level source of truth: why Tether exists, who it's for, what v1 must do, and how we'll know it worked. Technical depth (schemas, APIs, infra) lives in `docs/` and should never contradict this file — if it does, this file wins and `docs/` gets updated.
 >
 > Supersedes `PLAN.md` (retired — see stub).
 
@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-Trip planning today happens in Google Sheets: no structure, clunky sharing, no place data, no help drafting, and nothing useful once the trip actually starts. **Tripi is the trip-planning document — collaborative, AI-aware, and alive during the trip itself — that finally replaces the spreadsheet.**
+Trip planning today happens in Google Sheets: no structure, clunky sharing, no place data, no help drafting, and nothing useful once the trip actually starts. **Tether is the trip-planning document — collaborative, AI-aware, and alive during the trip itself — that finally replaces the spreadsheet.**
 
 It's a first-class, collaboratively-edited, AI-assisted trip document that quietly turns into a live travel companion the moment the trip starts, with a social layer so good trips are discoverable and reusable.
 
@@ -30,11 +30,11 @@ This is personal-use software, not a growth product — metrics are about whethe
 
 | Goal | What "succeeded" looks like |
 |---|---|
-| **Real usage** | You plan and run an actual real trip in Tripi, start to finish, instead of Sheets. |
+| **Real usage** | You plan and run an actual real trip in Tether, start to finish, instead of Sheets. |
 | **Real collaboration** | At least one real friend or family member — not a test account — plans or views a trip with you and the invite/collab flow holds up under real conditions. |
 | **Fast & reliable** | Drag-and-drop and realtime sync feel instant with no lag or sync bugs; AI never silently inserts wrong information (all AI place suggestions round-trip through Foursquare verification per `docs/ai-integration.md`). |
 | **Secure & cost-efficient** | The authz model in `docs/security.md` holds up in practice; spend tracks the cost ladder in `docs/ops.md` §7 with no surprise bills; no security incidents. |
-| **Doesn't block the App Store goal** | You intend to eventually ship Tripi as an iOS app on the App Store (§8). v1's data model, auth, and API should stay reusable by a future native client — this is a *constraint* on how v1 is built, not a v1 deliverable. |
+| **Doesn't block the App Store goal** | You intend to eventually ship Tether as an iOS app on the App Store (§8). v1's data model, auth, and API should stay reusable by a future native client — this is a *constraint* on how v1 is built, not a v1 deliverable. |
 
 ## 4. v1 scope — functional requirements
 
@@ -64,7 +64,7 @@ Organized by feature area. Each area maps to a phase in §7; exit criteria there
 - Owner can invite by username (in-app) or signed email link.
 - Roles: Owner / Editor / Viewer, enforced at both the API layer and the realtime layer.
 - Exactly one owner per trip. The owner can transfer ownership to another member, and cannot leave or be removed without transferring first.
-- Email invites are single-use and expire after 7 days. If the email already belongs to a Tripi account, the invite also appears in-app. Accepting requires being signed in; the link is the capability, so any signed-in account may accept it. Re-inviting an existing member or a pending email returns the existing state rather than creating a duplicate.
+- Email invites are single-use and expire after 7 days. If the email already belongs to a Tether account, the invite also appears in-app. Accepting requires being signed in; the link is the capability, so any signed-in account may accept it. Re-inviting an existing member or a pending email returns the existing state rather than creating a duplicate.
 
 ### 4.5 AI Assistance
 - **Suggester** — proposes activity cards for a day (draggable, not auto-inserted).

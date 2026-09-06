@@ -12,7 +12,7 @@ One command setup:
 
 ```bash
 git clone <repo>
-cd tripi
+cd tether
 cp .env.example .env.local
 pnpm install
 pnpm db:up          # docker compose up -d for postgres + minio + hocuspocus
@@ -31,13 +31,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: tripi
-      POSTGRES_PASSWORD: tripi
-      POSTGRES_DB: tripi
+      POSTGRES_USER: tether
+      POSTGRES_PASSWORD: tether
+      POSTGRES_DB: tether
     ports: ['5432:5432']
     volumes: ['pgdata:/var/lib/postgresql/data']
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'tripi']
+      test: ['CMD', 'pg_isready', '-U', 'tether']
       interval: 5s
       retries: 5
 
@@ -45,7 +45,7 @@ services:
     build: ./services/realtime
     depends_on: [postgres]
     environment:
-      DATABASE_URL: postgresql://tripi:tripi@postgres:5432/tripi
+      DATABASE_URL: postgresql://tether:tether@postgres:5432/tether
       HOCUSPOCUS_JWT_SECRET: dev-only-not-secret
     ports: ['1234:1234']
 
@@ -79,10 +79,10 @@ MinIO mocks S3; we configure the AWS SDK with the MinIO endpoint in dev.
     "db:up": "docker compose up -d postgres minio hocuspocus",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && pnpm db:up && sleep 3 && pnpm db:migrate && pnpm db:seed",
-    "db:migrate": "pnpm --filter @tripi/db drizzle-kit migrate",
-    "db:generate": "pnpm --filter @tripi/db drizzle-kit generate",
-    "db:seed": "pnpm --filter @tripi/web tsx src/server/db/seed.ts",
-    "e2e": "pnpm --filter @tripi/web playwright test"
+    "db:migrate": "pnpm --filter @tether/db drizzle-kit migrate",
+    "db:generate": "pnpm --filter @tether/db drizzle-kit generate",
+    "db:seed": "pnpm --filter @tether/web tsx src/server/db/seed.ts",
+    "e2e": "pnpm --filter @tether/web playwright test"
   }
 }
 ```
@@ -99,8 +99,8 @@ jobs:
     services:
       postgres:
         image: postgres:16
-        env: { POSTGRES_PASSWORD: tripi, POSTGRES_USER: tripi, POSTGRES_DB: tripi }
-        options: --health-cmd "pg_isready -U tripi" --health-interval 5s
+        env: { POSTGRES_PASSWORD: tether, POSTGRES_USER: tether, POSTGRES_DB: tether }
+        options: --health-cmd "pg_isready -U tether" --health-interval 5s
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
@@ -113,7 +113,7 @@ jobs:
       - run: pnpm test
       - run: pnpm e2e
         env:
-          DATABASE_URL: postgresql://tripi:tripi@localhost:5432/tripi
+          DATABASE_URL: postgresql://tether:tether@localhost:5432/tether
 ```
 
 Deployment for v1 is manual (Amplify auto-deploys on push to `main` via its own GitHub connection — no extra workflow needed for that; the realtime service is redeployed by hand with a one-line `aws ecs update-service --force-new-deployment` when its image changes).
@@ -140,7 +140,7 @@ Route 53                                 (when we have a domain)
                   └─→ task: services/realtime container
 
    apps/web SSR Lambda + ECS task → RDS Postgres (private subnet)
-                                  → S3 (bucket-tripi-prod)
+                                  → S3 (bucket-tether-prod)
                                   → SES
                                   → External: Gemini, Tavily, Foursquare, Mapbox
 ```
@@ -207,7 +207,7 @@ NEXT_PUBLIC_MAPBOX_TOKEN=pk.<token-restricted-to-domain>
 NEXT_PUBLIC_LOCATION_INTERVAL_SEC=60
 
 # ---- Server-only ----
-DATABASE_URL=postgresql://tripi:tripi@localhost:5432/tripi
+DATABASE_URL=postgresql://tether:tether@localhost:5432/tether
 BETTER_AUTH_SECRET=replace-me                           # generate with `openssl rand -hex 32`
 HOCUSPOCUS_JWT_SECRET=replace-me-as-well
 
@@ -216,14 +216,14 @@ TAVILY_API_KEY=...                                       # https://tavily.com
 FOURSQUARE_API_KEY=...                                   # https://developer.foursquare.com
 MAPBOX_SECRET_TOKEN=sk....                               # for upload tooling, optional
 
-S3_BUCKET=tripi-dev
+S3_BUCKET=tether-dev
 S3_REGION=us-east-1
 S3_ENDPOINT=http://localhost:9000                        # MinIO in dev; remove in prod
 S3_ACCESS_KEY=minio
 S3_SECRET_KEY=minio12345
 
 SES_REGION=us-east-1
-SES_FROM=Tripi <hello@example.com>
+SES_FROM=Tether <hello@example.com>
 
 # Feature flags
 ENABLE_AI=true
@@ -263,7 +263,7 @@ Boot fails loudly if anything's missing. No silent runtime crashes.
 One free client-side error tracker — [Highlight.io](https://highlight.io) free tier or Sentry free — with PII scrubbing on, never capturing form values. This is the one piece of "observability" worth having from day one, because otherwise a bug a real collaborator hits is invisible to you.
 
 ### 5.3 Deferred until multi-user/public launch actually approaches
-- **Custom metrics** (OpenTelemetry SDK, `tripi.*` counters/histograms) — CloudWatch's default request/error metrics from Amplify and ECS are enough to eyeball while it's just you and a few invited users.
+- **Custom metrics** (OpenTelemetry SDK, `tether.*` counters/histograms) — CloudWatch's default request/error metrics from Amplify and ECS are enough to eyeball while it's just you and a few invited users.
 - **Dashboards** — a single CloudWatch dashboard is worth building once there's more than one person's traffic to make sense of.
 - **Alarms/paging** — no PagerDuty, no "page the founder" for v1; check things by hand. Build real alarms (5xx rate, p95 latency, realtime persist failures, AI/Foursquare cost thresholds) before inviting people beyond a small trusted circle.
 

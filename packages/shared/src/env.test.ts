@@ -4,7 +4,7 @@ import { parseCoreEnv, parseRealtimeEnv, parseWebEnv } from './env'
 const core = {
   NODE_ENV: 'development',
   APP_STAGE: 'local',
-  DATABASE_URL: 'postgresql://tripi:tripi@localhost:5433/tripi',
+  DATABASE_URL: 'postgresql://tether:tether@localhost:5433/tether',
 }
 
 const web = {
@@ -12,7 +12,7 @@ const web = {
   NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
   NEXT_PUBLIC_HOCUSPOCUS_URL: 'ws://localhost:1234',
   BETTER_AUTH_SECRET: 'b'.repeat(32),
-  EMAIL_FROM: 'Tripi <no-reply@tripi.local>',
+  EMAIL_FROM: 'Tether <no-reply@tether.local>',
 }
 
 const realtime = {
@@ -23,7 +23,7 @@ const realtime = {
 
 describe('core env', () => {
   it('accepts a complete environment', () => {
-    expect(parseCoreEnv(core).DATABASE_URL).toBe('postgresql://tripi:tripi@localhost:5433/tripi')
+    expect(parseCoreEnv(core).DATABASE_URL).toBe('postgresql://tether:tether@localhost:5433/tether')
   })
 
   it('defaults NODE_ENV to development', () => {

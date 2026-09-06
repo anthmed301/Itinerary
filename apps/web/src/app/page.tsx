@@ -11,7 +11,7 @@ export default async function HomePage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-10">
       <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold">Tripi</h1>
+        <h1 className="text-3xl font-bold">Tether</h1>
         <p className="text-sm text-neutral-500">Phase 0 foundation</p>
         <p className="text-sm">
           <a className="underline" href="/profile" data-testid="profile-link">

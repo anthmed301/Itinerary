@@ -17,8 +17,8 @@ test('session cookie is httpOnly and SameSite=Lax', async ({ page, context }) =>
   const cookies = await context.cookies()
   // Review §4.1: useSecureCookies follows NODE_ENV, and Better Auth renames the
   // cookie to `__Secure-…` when it is on — so match the suffix, not the prefix.
-  const session = cookies.find((c) => c.name.endsWith('tripi.session_token'))
-  expect(session, 'a tripi session cookie should be set').toBeTruthy()
+  const session = cookies.find((c) => c.name.endsWith('tether.session_token'))
+  expect(session, 'a tether session cookie should be set').toBeTruthy()
   expect(session?.httpOnly).toBe(true)
   expect(session?.sameSite).toBe('Lax')
   // `next start` (CI=1) sets NODE_ENV=production; `next dev` does not.

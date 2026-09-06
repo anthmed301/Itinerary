@@ -21,7 +21,7 @@ Three directions, each internally consistent. None are "kinda this kinda that" �
 | Border | `rgba(0,0,0,0.06)` | `rgba(255,255,255,0.08)` |
 
 **Type:** Inter (UI) + Source Serif Pro (display). Weight: 400/500/700.
-**Vibe sentence:** "Tripi is the tool you use to actually plan the trip."
+**Vibe sentence:** "Tether is the tool you use to actually plan the trip."
 **Reference:** Linear's structure + Airbnb's warmth.
 
 ### B. Playful-vivid (Duolingo-energy, but for adults)
@@ -55,7 +55,7 @@ Three directions, each internally consistent. None are "kinda this kinda that" �
 **Vibe sentence:** "Plan beautifully. Travel deliberately."
 **Reference:** Apple Maps, Roam, Things 3.
 
-> **My recommendation:** **A (Warm-modern).** Highest match to Tripi's product positioning (replacement for Sheets — needs to feel premium and considered, not toy-ish). B is a great second choice if you want to lean into virality. C risks feeling too austere for a social app.
+> **My recommendation:** **A (Warm-modern).** Highest match to Tether's product positioning (replacement for Sheets — needs to feel premium and considered, not toy-ish). B is a great second choice if you want to lean into virality. C risks feeling too austere for a social app.
 
 The rest of this doc assumes the chosen direction's color slots are bound to semantic token names. Switching brands later means swapping one CSS variable file.
 
@@ -292,7 +292,7 @@ System default; manual override in settings. CSS variables swap on `:root[data-t
 Three patterns:
 - **Skeleton blocks** for known-shape content (trip cards, activity rows). Shimmer pulse 1.4s.
 - **Inline spinners** for in-place actions (button loading, save).
-- **Toast progress** for long-running ops (auto-planner: "Tripi is planning your trip… (8s)").
+- **Toast progress** for long-running ops (auto-planner: "Tether is planning your trip… (8s)").
 
 We never show a fullscreen spinner. Always content-shaped placeholders.
 

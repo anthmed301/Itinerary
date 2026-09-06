@@ -90,7 +90,7 @@ let realtimeCache: RealtimeEnv | undefined
  * before the runtime environment exists.
  *
  * All three read server-side process.env and are therefore server-only —
- * biome.json restricts `@tripi/shared/env` to server directories.
+ * biome.json restricts `@tether/shared/env` to server directories.
  */
 export function coreEnv(): CoreEnv {
   coreCache ??= parseCoreEnv(process.env)

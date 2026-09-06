@@ -26,11 +26,11 @@ function layout(heading: string, body: string, cta: { label: string; url: string
 export function verificationEmail(input: { name: string; url: string }): Email {
   const name = escapeHtml(input.name)
   return {
-    subject: 'Confirm your Tripi email address',
+    subject: 'Confirm your Tether email address',
     text: `Hi ${input.name},\n\nConfirm your email address:\n${input.url}\n\nThis link expires in 24 hours.`,
     html: layout(
       `Hi ${name},`,
-      '<p>Confirm your email address to finish setting up your Tripi account. This link expires in 24 hours.</p>',
+      '<p>Confirm your email address to finish setting up your Tether account. This link expires in 24 hours.</p>',
       { label: 'Confirm email', url: input.url },
     ),
   }
@@ -39,7 +39,7 @@ export function verificationEmail(input: { name: string; url: string }): Email {
 export function resetPasswordEmail(input: { name: string; url: string }): Email {
   const name = escapeHtml(input.name)
   return {
-    subject: 'Reset your Tripi password',
+    subject: 'Reset your Tether password',
     text: `Hi ${input.name},\n\nReset your password:\n${input.url}\n\nThis link expires in 1 hour and can be used once. If you did not ask for this, ignore this email.`,
     html: layout(
       `Hi ${name},`,

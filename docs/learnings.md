@@ -1,4 +1,4 @@
-# Tripi — Learnings
+# Tether — Learnings
 
 > Lessons that transfer, captured while they were still fresh. Distinct from `docs/build-log.md`, which records *what shipped*; this records *what we now know*.
 >
@@ -56,7 +56,7 @@
 
 ### L6 — Config that is only a string may not match what you meant
 
-tsdown's `deps.alwaysBundle: ['@tripi/shared']` matched the bare package name but not `@tripi/shared/env`. Every real import in the codebase is a subpath, so nothing was bundled. A RegExp fixed it.
+tsdown's `deps.alwaysBundle: ['@tether/shared']` matched the bare package name but not `@tether/shared/env`. Every real import in the codebase is a subpath, so nothing was bundled. A RegExp fixed it.
 
 **Do:** when a config takes patterns, check whether it means exact match or prefix, and verify against a real case.
 

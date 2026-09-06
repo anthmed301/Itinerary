@@ -1,5 +1,5 @@
-import { validateUsername } from '@tripi/shared'
-import { getOrCreateProfile, isUsernameAvailable, updateProfile } from '@tripi/shared/db'
+import { validateUsername } from '@tether/shared'
+import { getOrCreateProfile, isUsernameAvailable, updateProfile } from '@tether/shared/db'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { protectedProcedure, publicProcedure, rateLimited, router } from '../init'

@@ -17,14 +17,14 @@ jobs:
       postgres:
         image: postgres:17.11
         env:
-          POSTGRES_USER: tripi
-          POSTGRES_PASSWORD: tripi
-          POSTGRES_DB: tripi
+          POSTGRES_USER: tether
+          POSTGRES_PASSWORD: tether
+          POSTGRES_DB: tether
         # 5433 on the host to match docker-compose.yml, so DATABASE_URL is
         # byte-identical locally and in CI.
         ports: ['5433:5432']
         options: >-
-          --health-cmd "pg_isready -U tripi -d tripi"
+          --health-cmd "pg_isready -U tether -d tether"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -41,7 +41,7 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://tripi:tripi@localhost:5433/tripi
+      DATABASE_URL: postgresql://tether:tether@localhost:5433/tether
       HOCUSPOCUS_PORT: '1234'
       HOCUSPOCUS_JWT_SECRET: ci-secret-that-is-at-least-thirty-two-chars
       NEXT_PUBLIC_APP_URL: http://localhost:3000
@@ -52,7 +52,7 @@ jobs:
       BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-thirty-two-chars
       SMTP_HOST: localhost
       SMTP_PORT: '1025'
-      EMAIL_FROM: Tripi <no-reply@tripi.local>
+      EMAIL_FROM: Tether <no-reply@tether.local>
       REQUIRE_EMAIL_VERIFICATION: 'false'
       RATE_LIMIT_ENABLED: 'true'
 
@@ -96,8 +96,8 @@ jobs:
 
       - name: Assert the realtime artefact is self-contained
         run: |
-          if grep -q '@tripi/shared' services/realtime/dist/server.mjs; then
-            echo "::error::dist/server.mjs still imports @tripi/shared — check deps.alwaysBundle in tsdown.config.ts"
+          if grep -q '@tether/shared' services/realtime/dist/server.mjs; then
+            echo "::error::dist/server.mjs still imports @tether/shared — check deps.alwaysBundle in tsdown.config.ts"
             exit 1
           fi
 
@@ -109,7 +109,7 @@ jobs:
           fi
 
       - name: Install Playwright browser
-        run: pnpm --filter @tripi/web exec playwright install chromium --with-deps
+        run: pnpm --filter @tether/web exec playwright install chromium --with-deps
 
       - name: End-to-end tests against the build
         run: pnpm e2e

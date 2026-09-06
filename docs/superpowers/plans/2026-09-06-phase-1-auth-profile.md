@@ -1,4 +1,4 @@
-# Tripi Phase 1 — Auth + Profile Implementation Plan
+# Tether Phase 1 — Auth + Profile Implementation Plan
 
 > ## Revision 2 — 2026-09-06, after independent review
 >
@@ -123,7 +123,7 @@ describe('web env — auth and email', () => {
   const authed = {
     ...web,
     BETTER_AUTH_SECRET: 'b'.repeat(32),
-    EMAIL_FROM: 'Tripi <no-reply@tripi.local>',
+    EMAIL_FROM: 'Tether <no-reply@tether.local>',
   }
 
   it('requires a Better Auth secret of at least 32 characters', () => {
@@ -160,7 +160,7 @@ describe('web env — auth and email', () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: FAIL — `BETTER_AUTH_SECRET` is not yet in the schema, so `parseWebEnv({...})` succeeds where the test expects a throw.
@@ -204,7 +204,7 @@ const WebEnvSchema = z.object({
 - [ ] **Step 4: Run the tests to verify they pass**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: PASS, 20 tests (15 existing + 5 new).
@@ -222,7 +222,7 @@ BETTER_AUTH_SECRET=replace-me-with-64-hex-chars-from-openssl-rand-hex-32
 # Mailpit from docker-compose; inbox at http://localhost:8025
 SMTP_HOST=localhost
 SMTP_PORT=1025
-EMAIL_FROM=Tripi <no-reply@tripi.local>
+EMAIL_FROM=Tether <no-reply@tether.local>
 
 # D1.5: emails are sent locally but login is not gated on verification.
 REQUIRE_EMAIL_VERIFICATION=false
@@ -241,7 +241,7 @@ cat >> .env.local <<'EOF'
 BETTER_AUTH_SECRET=replace-me
 SMTP_HOST=localhost
 SMTP_PORT=1025
-EMAIL_FROM=Tripi <no-reply@tripi.local>
+EMAIL_FROM=Tether <no-reply@tether.local>
 REQUIRE_EMAIL_VERIFICATION=false
 RATE_LIMIT_ENABLED=true
 EOF
@@ -375,7 +375,7 @@ describe('validateUsername', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: FAIL, `Failed to resolve import "./username"`.
@@ -401,7 +401,7 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   'admin', 'administrator', 'api', 'auth', 'login', 'logout', 'signup', 'signin',
   'settings', 'profile', 'me', 'you', 'explore', 'trip', 'trips', 'new', 'edit',
   'help', 'support', 'about', 'terms', 'privacy', 'security', 'billing',
-  'tripi', 'official', 'staff', 'system', 'root', 'null', 'undefined',
+  'tether', 'official', 'staff', 'system', 'root', 'null', 'undefined',
   'static', 'assets', 'public', 'health', 'status',
 ])
 
@@ -451,7 +451,7 @@ export function validateUsername(raw: string): UsernameResult {
 - [ ] **Step 4: Run to verify it passes**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: PASS, 32 tests total.
@@ -460,9 +460,9 @@ Expected: PASS, 32 tests total.
 
 ```ts
 // Browser-safe barrel. Server-only modules are reached through their subpaths:
-//   @tripi/shared/env       Zod-validated process env
-//   @tripi/shared/db        Drizzle client
-//   @tripi/shared/db/schema Drizzle tables
+//   @tether/shared/env       Zod-validated process env
+//   @tether/shared/db        Drizzle client
+//   @tether/shared/db/schema Drizzle tables
 // biome.json enforces that restriction; see the boundaries table in the plan.
 export type { CoreEnv, RealtimeEnv, WebEnv } from './env'
 export { docNameForTrip, getActivities, getDays, getMeta, tripIdFromDocName } from './yjs/schema'
@@ -623,8 +623,8 @@ pnpm db:migrate
 - [ ] **Step 4: Verify the shape in Postgres**
 
 ```bash
-docker compose exec -T postgres psql -U tripi -d tripi -c '\d user'
-docker compose exec -T postgres psql -U tripi -d tripi -c '\d user_profile'
+docker compose exec -T postgres psql -U tether -d tether -c '\d user'
+docker compose exec -T postgres psql -U tether -d tether -c '\d user_profile'
 ```
 
 Expected: `user` has `username`, `username_lower`, `email_verified`; two unique indexes (`user_email_idx`, `user_username_lower_idx`). `user_profile` has `user_id` as primary key with a cascade FK.
@@ -634,7 +634,7 @@ Expected: `user` has `username`, `username_lower`, `email_verified`; two unique 
 The index is the sole arbiter under D1.2, so verify it rather than trust it:
 
 ```bash
-docker compose exec -T postgres psql -U tripi -d tripi -c "
+docker compose exec -T postgres psql -U tether -d tether -c "
 insert into \"user\" (id,name,email,username,username_lower) values ('u1','A','a@x.co','Alice','alice');
 insert into \"user\" (id,name,email,username,username_lower) values ('u2','B','b@x.co','ALICE','alice');
 " 2>&1 | tail -3
@@ -645,7 +645,7 @@ Expected: the second insert fails with `duplicate key value violates unique cons
 Clean up:
 
 ```bash
-docker compose exec -T postgres psql -U tripi -d tripi -c "delete from \"user\" where id in ('u1','u2');"
+docker compose exec -T postgres psql -U tether -d tether -c "delete from \"user\" where id in ('u1','u2');"
 ```
 
 - [ ] **Step 6: Commit**
@@ -666,8 +666,8 @@ git commit -m "feat(shared): better auth tables and user_profile with first auth
 - [ ] **Step 1: Add the dependencies**
 
 ```bash
-pnpm --filter @tripi/web add nodemailer@9.0.5
-pnpm --filter @tripi/web add -D @types/nodemailer@8.0.1
+pnpm --filter @tether/web add nodemailer@9.0.5
+pnpm --filter @tether/web add -D @types/nodemailer@8.0.1
 ```
 
 - [ ] **Step 2: Write the failing test `apps/web/src/server/email/templates.test.ts`**
@@ -719,7 +719,7 @@ describe('resetPasswordEmail', () => {
 - [ ] **Step 3: Run to verify it fails**
 
 ```bash
-pnpm --filter @tripi/web test
+pnpm --filter @tether/web test
 ```
 
 Expected: FAIL, `Failed to resolve import "./templates"`.
@@ -755,11 +755,11 @@ function layout(heading: string, body: string, cta: { label: string; url: string
 export function verificationEmail(input: { name: string; url: string }): Email {
   const name = escapeHtml(input.name)
   return {
-    subject: 'Confirm your Tripi email address',
+    subject: 'Confirm your Tether email address',
     text: `Hi ${input.name},\n\nConfirm your email address:\n${input.url}\n\nThis link expires in 24 hours.`,
     html: layout(
       `Hi ${name},`,
-      '<p>Confirm your email address to finish setting up your Tripi account. This link expires in 24 hours.</p>',
+      '<p>Confirm your email address to finish setting up your Tether account. This link expires in 24 hours.</p>',
       { label: 'Confirm email', url: input.url },
     ),
   }
@@ -768,7 +768,7 @@ export function verificationEmail(input: { name: string; url: string }): Email {
 export function resetPasswordEmail(input: { name: string; url: string }): Email {
   const name = escapeHtml(input.name)
   return {
-    subject: 'Reset your Tripi password',
+    subject: 'Reset your Tether password',
     text: `Hi ${input.name},\n\nReset your password:\n${input.url}\n\nThis link expires in 1 hour and can be used once. If you did not ask for this, ignore this email.`,
     html: layout(
       `Hi ${name},`,
@@ -784,7 +784,7 @@ Note the `text` bodies interpolate the **raw** name deliberately — plain text 
 - [ ] **Step 5: Run to verify it passes**
 
 ```bash
-pnpm --filter @tripi/web test
+pnpm --filter @tether/web test
 ```
 
 Expected: PASS, 7 tests.
@@ -792,7 +792,7 @@ Expected: PASS, 7 tests.
 - [ ] **Step 6: Write `apps/web/src/server/email/mailer.ts`**
 
 ```ts
-import { webEnv } from '@tripi/shared/env'
+import { webEnv } from '@tether/shared/env'
 import nodemailer from 'nodemailer'
 import type { Email } from './templates'
 
@@ -858,7 +858,7 @@ describe('redact', () => {
 - [ ] **Step 8: Run to verify it fails, then write `apps/web/src/server/log.ts`**
 
 ```bash
-pnpm --filter @tripi/web test
+pnpm --filter @tether/web test
 ```
 
 Expected: FAIL, `Failed to resolve import "./log"`. Then:
@@ -925,7 +925,7 @@ git commit -m "feat(web): mailpit mailer, escaped templates, and redacting auth 
 - [ ] **Step 1: Add the dependency**
 
 ```bash
-pnpm --filter @tripi/web add better-auth@1.7.1
+pnpm --filter @tether/web add better-auth@1.7.1
 ```
 
 - [ ] **Step 2: Write the failing test `apps/web/src/server/auth/guard.test.ts`**
@@ -974,7 +974,7 @@ describe('assertProductionAuthPosture', () => {
 - [ ] **Step 3: Run to verify it fails**
 
 ```bash
-pnpm --filter @tripi/web test
+pnpm --filter @tether/web test
 ```
 
 Expected: FAIL, `Failed to resolve import "./guard"`.
@@ -1011,7 +1011,7 @@ export function assertProductionAuthPosture(env: AuthPosture): void {
 - [ ] **Step 5: Run to verify it passes**
 
 ```bash
-pnpm --filter @tripi/web test
+pnpm --filter @tether/web test
 ```
 
 Expected: PASS, 11 tests.
@@ -1019,9 +1019,9 @@ Expected: PASS, 11 tests.
 - [ ] **Step 6: Write `apps/web/src/server/auth/index.ts`**
 
 ```ts
-import { db } from '@tripi/shared/db'
-import { schema, userProfile } from '@tripi/shared/db'
-import { webEnv } from '@tripi/shared/env'
+import { db } from '@tether/shared/db'
+import { schema, userProfile } from '@tether/shared/db'
+import { webEnv } from '@tether/shared/env'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { sendEmail } from '../email/mailer'
@@ -1102,7 +1102,7 @@ export const auth = betterAuth({
   },
 
   advanced: {
-    cookiePrefix: 'tripi',
+    cookiePrefix: 'tether',
     useSecureCookies: env.NODE_ENV === 'production',
   },
 
@@ -1157,7 +1157,7 @@ export const auth = betterAuth({
 Add the import at the top of the file:
 
 ```ts
-import { validateUsername } from '@tripi/shared'
+import { validateUsername } from '@tether/shared'
 ```
 
 Server-side validation is the authority; the signup form's live check is a convenience, never a control.
@@ -1174,7 +1174,7 @@ export const { GET, POST } = toNextJsHandler(auth)
 - [ ] **Step 9: Verify the endpoint is live**
 
 ```bash
-pnpm --filter @tripi/web dev
+pnpm --filter @tether/web dev
 ```
 
 In a second terminal:
@@ -1204,7 +1204,7 @@ Phase 0 left `userId: null` with a comment saying Phase 1 would fill it in. This
 - [ ] **Step 1: Replace `apps/web/src/server/trpc/init.ts`**
 
 ```ts
-import { type Database, db } from '@tripi/shared/db'
+import { type Database, db } from '@tether/shared/db'
 import { initTRPC, TRPCError } from '@trpc/server'
 import superjson from 'superjson'
 import { auth } from '@/server/auth'
@@ -1426,8 +1426,8 @@ export async function isUsernameAvailable(
 - [ ] **Step 2: Write `apps/web/src/server/trpc/routers/profile.ts`**
 
 ```ts
-import { getOrCreateProfile, isUsernameAvailable, updateProfile } from '@tripi/shared/db'
-import { validateUsername } from '@tripi/shared'
+import { getOrCreateProfile, isUsernameAvailable, updateProfile } from '@tether/shared/db'
+import { validateUsername } from '@tether/shared'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { protectedProcedure, publicProcedure, router } from '../init'
@@ -1533,7 +1533,7 @@ const securityHeaders = [
 const config: NextConfig = {
   reactStrictMode: true,
   // Workspace packages ship TypeScript source, so Next must transpile them.
-  transpilePackages: ['@tripi/shared'],
+  transpilePackages: ['@tether/shared'],
   // Next 16 writes apps/web/AGENTS.md and apps/web/CLAUDE.md on first dev run.
   // This repo keeps its agent instructions in the root CLAUDE.md; a generated
   // second copy scoped to apps/web would silently compete with it.
@@ -1549,7 +1549,7 @@ export default config
 - [ ] **Step 2: Verify the headers are served**
 
 ```bash
-pnpm --filter @tripi/web dev
+pnpm --filter @tether/web dev
 ```
 
 ```bash
@@ -1687,7 +1687,7 @@ export function Field({
 ```tsx
 'use client'
 
-import { validateUsername } from '@tripi/shared'
+import { validateUsername } from '@tether/shared'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useEffect, useState } from 'react'
 import { AuthForm, Field } from '@/components/AuthForm'
@@ -1741,7 +1741,7 @@ export default function SignupPage() {
 
   return (
     <AuthForm
-      title="Create your Tripi account"
+      title="Create your Tether account"
       submitLabel="Sign up"
       error={error}
       pending={pending}
@@ -1824,7 +1824,7 @@ export default function LoginPage() {
 
   return (
     <AuthForm
-      title="Log in to Tripi"
+      title="Log in to Tether"
       submitLabel="Log in"
       error={error}
       pending={pending}
@@ -2231,7 +2231,7 @@ export function firstLink(body: string): string {
 
 /** A unique address per test run, so tests never collide on the unique index. */
 export function uniqueEmail(prefix = 'user'): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@tripi.test`
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@tether.test`
 }
 
 export function uniqueUsername(prefix = 'user'): string {
@@ -2430,8 +2430,8 @@ test('session cookie is httpOnly and SameSite=Lax', async ({ page, context }) =>
   await expect(page).toHaveURL(/\/profile$/)
 
   const cookies = await context.cookies()
-  const session = cookies.find((c) => c.name.startsWith('tripi'))
-  expect(session, 'a tripi session cookie should be set').toBeTruthy()
+  const session = cookies.find((c) => c.name.startsWith('tether'))
+  expect(session, 'a tether session cookie should be set').toBeTruthy()
   expect(session?.httpOnly).toBe(true)
   expect(session?.sameSite).toBe('Lax')
 })
@@ -2592,7 +2592,7 @@ test('does not leak internals when a request fails', async ({ request }) => {
 
 ```bash
 pnpm db:up
-pnpm --filter @tripi/web e2e
+pnpm --filter @tether/web e2e
 ```
 
 Expected: 17 passed (3 from Phase 0 + 14 new).
@@ -2606,7 +2606,7 @@ for p in 1234 3000; do
   PIDS=$(lsof -nP -tiTCP:$p -sTCP:LISTEN 2>/dev/null)
   [ -n "$PIDS" ] && kill -9 $PIDS
 done
-CI=1 pnpm --filter @tripi/web e2e
+CI=1 pnpm --filter @tether/web e2e
 ```
 
 Expected: 17 passed, with `[WebServer] $ turbo run start`.
@@ -2762,7 +2762,7 @@ Every line is a command with a stated result. Dev-mode green is not green.
 **Gates**
 
 - [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && CI=1 pnpm e2e` all pass.
-- [ ] A `'use client'` file importing `@tripi/shared/db` still fails lint (Phase 0's boundary, unbroken).
+- [ ] A `'use client'` file importing `@tether/shared/db` still fails lint (Phase 0's boundary, unbroken).
 - [ ] `grep -rl "postgres-js\|node:tls" apps/web/.next/static/chunks/` returns nothing — `auth-client.ts` imports `typeof auth` as a **type**, and this proves it stayed a type.
 - [ ] CI green on the PR, including the audit step.
 

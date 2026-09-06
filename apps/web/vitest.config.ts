@@ -17,7 +17,7 @@ export default defineConfig({
     // not connect until a query runs, so this never reaches a real database.
     env: {
       APP_STAGE: 'local',
-      DATABASE_URL: 'postgresql://tripi:tripi@localhost:5433/tripi_unit_tests_never_connect',
+      DATABASE_URL: 'postgresql://tether:tether@localhost:5433/tether_unit_tests_never_connect',
     },
   },
 })

@@ -37,7 +37,7 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   'privacy',
   'security',
   'billing',
-  'tripi',
+  'tether',
   'official',
   'staff',
   'system',

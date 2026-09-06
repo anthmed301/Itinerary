@@ -1,5 +1,5 @@
 import { Server } from '@hocuspocus/server'
-import { realtimeEnv } from '@tripi/shared/env'
+import { realtimeEnv } from '@tether/shared/env'
 import pino from 'pino'
 
 const log = pino({ name: 'realtime' })
@@ -19,7 +19,7 @@ if (env.NODE_ENV === 'production') {
  */
 const server = new Server({
   port: env.HOCUSPOCUS_PORT,
-  name: 'tripi-realtime',
+  name: 'tether-realtime',
 
   async onAuthenticate(data) {
     // Hocuspocus 4 exposes web-standard Headers and URLSearchParams.

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Tripi',
+  title: 'Tether',
   description: 'The trip-planning document that replaces the spreadsheet.',
 }
 

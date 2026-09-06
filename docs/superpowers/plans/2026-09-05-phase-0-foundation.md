@@ -1,10 +1,10 @@
-# Tripi Phase 0 — Foundation Implementation Plan
+# Tether Phase 0 — Foundation Implementation Plan
 
 > **Revision 2 — 2026-09-05.** Every finding in `docs/plan-review-phase-0-2026-09-05.md` has been applied (§3 blockers, §4 high-priority, §5 medium/low). Three of the review's own claims were re-probed while revising and two of its patches were wrong; see **Revision log** below. This revision is executable.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stand up the Tripi monorepo so that a browser page renders, calls tRPC, reads Postgres through Drizzle, and a second browser tab proves a Yjs value syncs through a self-hosted Hocuspocus server — all of it green in CI, and all of it green from a **production build**, not just from dev servers.
+**Goal:** Stand up the Tether monorepo so that a browser page renders, calls tRPC, reads Postgres through Drizzle, and a second browser tab proves a Yjs value syncs through a self-hosted Hocuspocus server — all of it green in CI, and all of it green from a **production build**, not just from dev servers.
 
 **Architecture:** Three workspace units instead of the eight in `docs/architecture.md` §2 (see `docs/prd-review-2026-09-05.md` §6.1). `apps/web` is the Next.js app and owns all UI, tRPC, and server modules. `services/realtime` is the Hocuspocus server. `packages/shared` holds the three things both must agree on: the Drizzle schema, the Yjs document shape, and the Zod-validated env contract. Postgres, MinIO, and Mailpit run in Docker; both Node services run on the host with hot reload (review §6.2).
 
@@ -37,7 +37,7 @@ Where each review finding landed, and what changed about it.
 
 Three of the review's claims were re-probed on 2026-09-05 while applying it. Probes are in **Verification probes** at the end of this plan.
 
-1. **§3.3's tsdown command does not work.** `tsdown … --no-external @tripi/shared` — that flag does not exist in tsdown. The nearest CLI flag, `--deps.always-bundle`, is accepted without error and **silently does nothing**: the build succeeds, `@tripi/shared` stays external, and the artefact crashes with the exact `ERR_MODULE_NOT_FOUND` the patch was meant to fix. Only the config-file form works. This plan uses `tsdown.config.ts` with `deps: { alwaysBundle: ['@tripi/shared'] }` (probe P3).
+1. **§3.3's tsdown command does not work.** `tsdown … --no-external @tether/shared` — that flag does not exist in tsdown. The nearest CLI flag, `--deps.always-bundle`, is accepted without error and **silently does nothing**: the build succeeds, `@tether/shared` stays external, and the artefact crashes with the exact `ERR_MODULE_NOT_FOUND` the patch was meant to fix. Only the config-file form works. This plan uses `tsdown.config.ts` with `deps: { alwaysBundle: ['@tether/shared'] }` (probe P3).
 2. **§3.3's tsdown version violates §4.3's own policy.** `tsdown@0.23.0` was published 2026-09-03 — two days old, zero patches. `0.22.14` (2026-07-23, six weeks old) is what the policy in §4.3 selects. Pinned to `0.22.14`.
 3. **§4.7's premise is half wrong.** It says Task 0's Node claim is stale because 24.20.0 is installed. 24.20.0 *is* installed under nvm, but the **active** `node` is still v23.6.0 from Homebrew and **pnpm is not installed at all**. Task 0 still has real work; it just no longer asserts machine state in prose. The check moves to `pnpm preflight`, which moves from Task 11 to Task 1 so it exists before anything needs it.
 
@@ -94,7 +94,7 @@ Every version below was resolved from the npm registry on 2026-09-05. Pin these 
 ## File structure
 
 ```
-Itinerary/                          (repo root; dir rename to tripi deferred)
+Itinerary/                          (repo root; dir rename to tether deferred)
   package.json                      workspaces, turbo scripts, packageManager
   pnpm-workspace.yaml
   turbo.json                        dev/build/start/test/typecheck pipeline
@@ -119,10 +119,10 @@ Itinerary/                          (repo root; dir rename to tripi deferred)
       env.ts                        Zod env schemas: core / web / realtime
       env.test.ts
       db/
-        client.ts                   Drizzle client factory      (@tripi/shared/db)
+        client.ts                   Drizzle client factory      (@tether/shared/db)
         schema.ts                   Drizzle tables (Phase 0: place)
       yjs/
-        schema.ts                   Y.Doc shape helpers         (@tripi/shared/yjs)
+        schema.ts                   Y.Doc shape helpers         (@tether/shared/yjs)
         schema.test.ts
 
   apps/web/                         Next.js app
@@ -155,7 +155,7 @@ Itinerary/                          (repo root; dir rename to tripi deferred)
   services/realtime/                Hocuspocus server
     package.json
     tsconfig.json
-    tsdown.config.ts                bundles @tripi/shared into the artefact
+    tsdown.config.ts                bundles @tether/shared into the artefact
     src/server.ts
 ```
 
@@ -166,7 +166,7 @@ These survive into every later phase, and every one of them is enforced by tooli
 | Boundary | Enforced by |
 |---|---|
 | `packages/shared` imports nothing from `apps/web` or `services/realtime` | No dependency edge in `packages/shared/package.json` |
-| Client components import `@tripi/shared` (browser-safe) only. `@tripi/shared/db` and `@tripi/shared/env` are **server-only** | Biome `noRestrictedImports` + `overrides`, Task 1 Step 6 |
+| Client components import `@tether/shared` (browser-safe) only. `@tether/shared/db` and `@tether/shared/env` are **server-only** | Biome `noRestrictedImports` + `overrides`, Task 1 Step 6 |
 | Only `packages/shared/src/db/` contains SQL or table definitions | Subpath export `./db`, `./db/schema` |
 | Only `packages/shared/src/yjs/schema.ts` defines the Y.Doc shape | Subpath export `./yjs` |
 | `apps/web/src/server/` is server-only; client components import from `apps/web/src/lib/` | Biome override list names the server directories |
@@ -282,7 +282,7 @@ allowBuilds:
 
 ```json
 {
-  "name": "tripi",
+  "name": "tether",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.25.0",
@@ -301,9 +301,9 @@ allowBuilds:
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && pnpm db:up && pnpm db:migrate",
-    "db:generate": "pnpm --filter @tripi/shared db:generate",
-    "db:migrate": "pnpm --filter @tripi/shared db:migrate",
-    "e2e": "pnpm --filter @tripi/web e2e"
+    "db:generate": "pnpm --filter @tether/shared db:generate",
+    "db:migrate": "pnpm --filter @tether/shared db:migrate",
+    "e2e": "pnpm --filter @tether/web e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
@@ -403,7 +403,7 @@ allowBuilds:
 
 `files.includes` excludes `packages/shared/migrations`, which drizzle-kit generates (Task 4). Biome reformats its `meta/*.json` files; `db:generate` writes them back unformatted; CI then fails on a file no human touched. Never lint generated output. Note the pattern has **no trailing `/**`** — since Biome 2.2 that form is wrong, and Biome lints its own config to tell you so.
 
-The `linter.rules.style.noRestrictedImports` block plus the `overrides` array is the **server/client boundary** (review §3.2). Without it, a `'use client'` component can import `@tripi/shared/db`, drag `postgres` and `drizzle-orm/postgres-js` into the browser bundle, and fail the Turbopack build on `net`/`tls` resolution — with a stack trace that points at the bundler rather than at the import.
+The `linter.rules.style.noRestrictedImports` block plus the `overrides` array is the **server/client boundary** (review §3.2). Without it, a `'use client'` component can import `@tether/shared/db`, drag `postgres` and `drizzle-orm/postgres-js` into the browser bundle, and fail the Turbopack build on `net`/`tls` resolution — with a stack trace that points at the bundler rather than at the import.
 
 ```json
 {
@@ -438,9 +438,9 @@ The `linter.rules.style.noRestrictedImports` block plus the `overrides` array is
           "level": "error",
           "options": {
             "paths": {
-              "@tripi/shared/db": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
-              "@tripi/shared/db/schema": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
-              "@tripi/shared/env": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**."
+              "@tether/shared/db": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
+              "@tether/shared/db/schema": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**.",
+              "@tether/shared/env": "Server-only. Import it from apps/web/src/server/**, apps/web/src/app/api/**, or services/realtime/**."
             }
           }
         }
@@ -637,13 +637,13 @@ services:
   postgres:
     image: postgres:17.11-alpine
     environment:
-      POSTGRES_USER: tripi
-      POSTGRES_PASSWORD: tripi
-      POSTGRES_DB: tripi
+      POSTGRES_USER: tether
+      POSTGRES_PASSWORD: tether
+      POSTGRES_DB: tether
     ports: ['5433:5432']
     volumes: ['pgdata:/var/lib/postgresql/data']
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U tripi -d tripi']
+      test: ['CMD-SHELL', 'pg_isready -U tether -d tether']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -689,7 +689,7 @@ NEXT_PUBLIC_HOCUSPOCUS_URL=ws://localhost:1234
 
 # ---- Server-only ----
 # Postgres from docker-compose
-DATABASE_URL=postgresql://tripi:tripi@localhost:5433/tripi
+DATABASE_URL=postgresql://tether:tether@localhost:5433/tether
 
 # Realtime server
 HOCUSPOCUS_PORT=1234
@@ -729,7 +729,7 @@ docker compose ps
 `--wait` blocks until every healthcheck passes, so this returns only when the stack is actually usable. Expected: three services listed, all showing `(healthy)`.
 
 ```bash
-docker compose exec -T postgres psql -U tripi -d tripi -c 'select 1 as ok;'
+docker compose exec -T postgres psql -U tether -d tether -c 'select 1 as ok;'
 ```
 
 Expected: a table with `ok` = `1`.
@@ -768,7 +768,7 @@ The exports map is the boundary (review §3.2). `.` is the browser-safe barrel; 
 
 ```json
 {
-  "name": "@tripi/shared",
+  "name": "@tether/shared",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -827,7 +827,7 @@ import { parseCoreEnv, parseRealtimeEnv, parseWebEnv } from './env'
 
 const core = {
   NODE_ENV: 'development',
-  DATABASE_URL: 'postgresql://tripi:tripi@localhost:5433/tripi',
+  DATABASE_URL: 'postgresql://tether:tether@localhost:5433/tether',
 }
 
 const web = {
@@ -844,7 +844,7 @@ const realtime = {
 
 describe('core env', () => {
   it('accepts a complete environment', () => {
-    expect(parseCoreEnv(core).DATABASE_URL).toBe('postgresql://tripi:tripi@localhost:5433/tripi')
+    expect(parseCoreEnv(core).DATABASE_URL).toBe('postgresql://tether:tether@localhost:5433/tether')
   })
 
   it('defaults NODE_ENV to development', () => {
@@ -905,7 +905,7 @@ describe('realtime env', () => {
 - [ ] **Step 4: Run the test to verify it fails**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: FAIL, `Failed to resolve import "./env"`.
@@ -978,7 +978,7 @@ let realtimeCache: RealtimeEnv | undefined
  * before the runtime environment exists.
  *
  * All three read server-side process.env and are therefore server-only —
- * biome.json restricts `@tripi/shared/env` to server directories.
+ * biome.json restricts `@tether/shared/env` to server directories.
  */
 export function coreEnv(): CoreEnv {
   coreCache ??= parseCoreEnv(process.env)
@@ -1002,9 +1002,9 @@ This barrel is **browser-safe**. It must never re-export anything from `./env` o
 
 ```ts
 // Browser-safe barrel. Server-only modules are reached through their subpaths:
-//   @tripi/shared/env       Zod-validated process env
-//   @tripi/shared/db        Drizzle client
-//   @tripi/shared/db/schema Drizzle tables
+//   @tether/shared/env       Zod-validated process env
+//   @tether/shared/db        Drizzle client
+//   @tether/shared/db/schema Drizzle tables
 // biome.json enforces that restriction; see the boundaries table in the plan.
 export type { CoreEnv, RealtimeEnv, WebEnv } from './env'
 ```
@@ -1014,7 +1014,7 @@ Types are safe to re-export: `verbatimModuleSyntax` plus `export type` means the
 - [ ] **Step 7: Run the tests to verify they pass**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: PASS, 11 tests.
@@ -1118,7 +1118,7 @@ export function createDb(connectionString: string = coreEnv().DATABASE_URL, max 
 // Next re-evaluates modules on every hot reload, so a module-scoped variable does
 // not survive one. globalThis does. Production gets a plain module singleton
 // because there is no reload to survive.
-const globalForDb = globalThis as typeof globalThis & { __tripiDb?: Database }
+const globalForDb = globalThis as typeof globalThis & { __tetherDb?: Database }
 
 let cached: Database | undefined
 
@@ -1127,8 +1127,8 @@ export function db(): Database {
     cached ??= createDb()
     return cached
   }
-  globalForDb.__tripiDb ??= createDb()
-  return globalForDb.__tripiDb
+  globalForDb.__tetherDb ??= createDb()
+  return globalForDb.__tetherDb
 }
 
 /**
@@ -1204,8 +1204,8 @@ Deliberate non-change, and the single most important line in this task. The revi
 Server code reaches the database through the subpath:
 
 ```ts
-import { db } from '@tripi/shared/db'
-import { place } from '@tripi/shared/db/schema'
+import { db } from '@tether/shared/db'
+import { place } from '@tether/shared/db/schema'
 ```
 
 - [ ] **Step 5: Prove the boundary is enforced, not just documented**
@@ -1216,7 +1216,7 @@ Before generating the migration, confirm the lint rule from Task 1 actually fire
 mkdir -p apps/web/src/components
 cat > apps/web/src/components/BoundaryProbe.tsx <<'EOF'
 'use client'
-import { db } from '@tripi/shared/db'
+import { db } from '@tether/shared/db'
 export const probe = db
 EOF
 pnpm lint
@@ -1249,7 +1249,7 @@ pnpm db:migrate
 - [ ] **Step 8: Verify the table exists**
 
 ```bash
-docker compose exec -T postgres psql -U tripi -d tripi -c '\d place'
+docker compose exec -T postgres psql -U tether -d tether -c '\d place'
 ```
 
 Expected: the column list including `fsq_id`, `refreshed_at`, `lat | double precision`, and the two indexes.
@@ -1276,7 +1276,7 @@ git commit -m "feat(shared): drizzle client and place table with first migration
 
 ```json
 {
-  "name": "@tripi/web",
+  "name": "@tether/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -1290,7 +1290,7 @@ git commit -m "feat(shared): drizzle client and place table with first migration
   },
   "dependencies": {
     "@hocuspocus/provider": "4.6.0",
-    "@tripi/shared": "workspace:*",
+    "@tether/shared": "workspace:*",
     "@trpc/client": "11.18.0",
     "@trpc/server": "11.18.0",
     "next": "16.3.4",
@@ -1379,7 +1379,7 @@ import type { NextConfig } from 'next'
 const config: NextConfig = {
   reactStrictMode: true,
   // Workspace packages ship TypeScript source, so Next must transpile them.
-  transpilePackages: ['@tripi/shared'],
+  transpilePackages: ['@tether/shared'],
   // Next 16 writes apps/web/AGENTS.md and apps/web/CLAUDE.md on first dev run.
   // This repo keeps its agent instructions in the root CLAUDE.md; a generated
   // second copy scoped to apps/web would silently compete with it.
@@ -1421,7 +1421,7 @@ import type { ReactNode } from 'react'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Tripi',
+  title: 'Tether',
   description: 'The trip-planning document that replaces the spreadsheet.',
 }
 
@@ -1444,7 +1444,7 @@ Tasks 6, 7, and 9 each add one section to this file. It exists now so the app bo
 export default function HomePage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-10">
-      <h1 className="text-3xl font-bold">Tripi</h1>
+      <h1 className="text-3xl font-bold">Tether</h1>
       <p className="text-neutral-600 dark:text-neutral-400">Phase 0 foundation.</p>
     </main>
   )
@@ -1455,18 +1455,18 @@ export default function HomePage() {
 
 ```bash
 pnpm install
-pnpm --filter @tripi/web dev
+pnpm --filter @tether/web dev
 ```
 
-Open http://localhost:3000. Expected: the heading "Tripi" in bold, confirming Tailwind 4 compiled. Stop the server with Ctrl+C.
+Open http://localhost:3000. Expected: the heading "Tether" in bold, confirming Tailwind 4 compiled. Stop the server with Ctrl+C.
 
 - [ ] **Step 10: Prove the production path works too**
 
 Do this now, at the smallest possible app, so that when `next build` breaks later you know it was the last thing you added (review §3.3 — production parity from Phase 0).
 
 ```bash
-pnpm --filter @tripi/web build
-pnpm --filter @tripi/web start
+pnpm --filter @tether/web build
+pnpm --filter @tether/web start
 ```
 
 Open http://localhost:3000. Expected: the same page, served from the build. Stop with Ctrl+C.
@@ -1494,7 +1494,7 @@ The import is the **subpath**, not the barrel. This file lives under `apps/web/s
 
 ```ts
 import { initTRPC } from '@trpc/server'
-import { type Database, db } from '@tripi/shared/db'
+import { type Database, db } from '@tether/shared/db'
 import superjson from 'superjson'
 
 export type Context = {
@@ -1521,7 +1521,7 @@ export const createCallerFactory = t.createCallerFactory
 The `down` branch is now reachable (M2). In the reviewed draft it could not execute — `count(*)` always returns a row, and a real outage throws before the check, so the RSC page crashed instead of rendering `down`. A handler that looks like it handles failure but does not is worse than one that admits it doesn't.
 
 ```ts
-import { countPlaces } from '@tripi/shared/db'
+import { countPlaces } from '@tether/shared/db'
 import { publicProcedure, router } from '../init'
 
 export const healthRouter = router({
@@ -1599,7 +1599,7 @@ export default async function HomePage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-10">
       <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold">Tripi</h1>
+        <h1 className="text-3xl font-bold">Tether</h1>
         <p className="text-sm text-neutral-500">Phase 0 foundation</p>
       </header>
 
@@ -1618,7 +1618,7 @@ export default async function HomePage() {
 - [ ] **Step 6: Verify in dev**
 
 ```bash
-pnpm --filter @tripi/web dev
+pnpm --filter @tether/web dev
 ```
 
 Open http://localhost:3000. Expected: `database: up` and `places cached: 0`.
@@ -1639,7 +1639,7 @@ This is the step that tests the `force-dynamic` claim rather than asserting it.
 
 ```bash
 pnpm db:down
-pnpm --filter @tripi/web build
+pnpm --filter @tether/web build
 pnpm db:up
 ```
 
@@ -1732,7 +1732,7 @@ import { HealthProbe } from '@/components/HealthProbe'
 - [ ] **Step 4: Verify**
 
 ```bash
-pnpm --filter @tripi/web dev
+pnpm --filter @tether/web dev
 ```
 
 Open http://localhost:3000. Expected: the browser section reads `up · superjson: ok`.
@@ -1748,7 +1748,7 @@ git commit -m "feat(web): browser tRPC client probe"
 
 ## Task 8: Hocuspocus 4 realtime server
 
-This is where blocking finding §3.3 is fixed. The reviewed draft built this service with `tsc` and started it with `node dist/server.js`. That does not work: `tsc` emits only the service's own files, resolves `@tripi/shared` through `node_modules` and treats it as an external library. At runtime Node resolves `@tripi/shared` to `packages/shared/src/index.ts` and applies type stripping — which **requires explicit file extensions on relative imports**. The barrel's `./env`, `./db/client`, `./yjs/schema` imports are extensionless, so Node throws `ERR_MODULE_NOT_FOUND` on the first line. Reproduced in probe P2.
+This is where blocking finding §3.3 is fixed. The reviewed draft built this service with `tsc` and started it with `node dist/server.js`. That does not work: `tsc` emits only the service's own files, resolves `@tether/shared` through `node_modules` and treats it as an external library. At runtime Node resolves `@tether/shared` to `packages/shared/src/index.ts` and applies type stripping — which **requires explicit file extensions on relative imports**. The barrel's `./env`, `./db/client`, `./yjs/schema` imports are extensionless, so Node throws `ERR_MODULE_NOT_FOUND` on the first line. Reproduced in probe P2.
 
 The fix is to bundle, so the artefact is self-contained. This also becomes the Dockerfile's build step at Stage 2 unchanged.
 
@@ -1759,7 +1759,7 @@ The fix is to bundle, so the artefact is self-contained. This also becomes the D
 
 ```json
 {
-  "name": "@tripi/realtime",
+  "name": "@tether/realtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -1772,7 +1772,7 @@ The fix is to bundle, so the artefact is self-contained. This also becomes the D
   },
   "dependencies": {
     "@hocuspocus/server": "4.6.0",
-    "@tripi/shared": "workspace:*",
+    "@tether/shared": "workspace:*",
     "pino": "10.3.1",
     "yjs": "13.6.32"
   },
@@ -1799,23 +1799,23 @@ export default defineConfig({
   entry: ['src/server.ts'],
   format: 'esm',
   platform: 'node',
-  // @tripi/shared ships TypeScript source. tsdown externalises declared
+  // @tether/shared ships TypeScript source. tsdown externalises declared
   // dependencies by default, which would leave Node to type-strip the shared
   // package at runtime and fail on its extensionless relative imports
   // (db/client.ts and yjs/schema.ts both have them).
   //
-  // Must be a RegExp, not the string '@tripi/shared': a bare string matches only
-  // the exact specifier and leaves subpath imports such as '@tripi/shared/env'
-  // and '@tripi/shared/db' external. Verified by inspecting dist/server.mjs.
+  // Must be a RegExp, not the string '@tether/shared': a bare string matches only
+  // the exact specifier and leaves subpath imports such as '@tether/shared/env'
+  // and '@tether/shared/db' external. Verified by inspecting dist/server.mjs.
   //
   // Config-only — the CLI flags (--no-external, --deps.always-bundle) are a no-op.
-  deps: { alwaysBundle: [/^@tripi\/shared(\/.*)?$/] },
+  deps: { alwaysBundle: [/^@tether\/shared(\/.*)?$/] },
 })
 ```
 
-> **The pattern must be a RegExp.** `alwaysBundle: ['@tripi/shared']` matches the bare specifier only. Every real import in this codebase is a *subpath* — `@tripi/shared/env` here, `@tripi/shared/db` from Phase 3 — and those stay external, silently. Caught during execution by inspecting the bundle: it was 0.88 kB and still contained `import { realtimeEnv } from "@tripi/shared/env"`. With the RegExp it is 160 kB and imports only `@hocuspocus/server` and `pino`.
+> **The pattern must be a RegExp.** `alwaysBundle: ['@tether/shared']` matches the bare specifier only. Every real import in this codebase is a *subpath* — `@tether/shared/env` here, `@tether/shared/db` from Phase 3 — and those stay external, silently. Caught during execution by inspecting the bundle: it was 0.88 kB and still contained `import { realtimeEnv } from "@tether/shared/env"`. With the RegExp it is 160 kB and imports only `@hocuspocus/server` and `pino`.
 >
-> **This failure is latent, not loud.** The string-matched build *starts and serves websockets correctly today*, because `env.ts` is a leaf module with no relative imports, so Node's type stripping handles it. It breaks the first time the service imports something from `@tripi/shared/db` or `@tripi/shared/yjs`, both of which do have extensionless relative imports — i.e. in Phase 3, far from the change that caused it. Check the bundle, not just the exit code.
+> **This failure is latent, not loud.** The string-matched build *starts and serves websockets correctly today*, because `env.ts` is a leaf module with no relative imports, so Node's type stripping handles it. It breaks the first time the service imports something from `@tether/shared/db` or `@tether/shared/yjs`, both of which do have extensionless relative imports — i.e. in Phase 3, far from the change that caused it. Check the bundle, not just the exit code.
 
 - [ ] **Step 3: Write `services/realtime/tsconfig.json`**
 
@@ -1838,7 +1838,7 @@ The production guard (review §4.8) is one line and the entire reason this stub 
 
 ```ts
 import { Server } from '@hocuspocus/server'
-import { realtimeEnv } from '@tripi/shared/env'
+import { realtimeEnv } from '@tether/shared/env'
 import pino from 'pino'
 
 const log = pino({ name: 'realtime' })
@@ -1858,7 +1858,7 @@ if (env.NODE_ENV === 'production') {
  */
 const server = new Server({
   port: env.HOCUSPOCUS_PORT,
-  name: 'tripi-realtime',
+  name: 'tether-realtime',
 
   async onAuthenticate(data) {
     // Hocuspocus 4 exposes web-standard Headers and URLSearchParams.
@@ -1886,7 +1886,7 @@ server.listen().then(() => {
 
 ```bash
 pnpm install
-pnpm --filter @tripi/realtime dev
+pnpm --filter @tether/realtime dev
 ```
 
 Expected: a log line reading `realtime server listening` with `"port":1234`.
@@ -1907,19 +1907,19 @@ Expected: `HTTP/1.1 101 Switching Protocols`. Stop the dev server.
 - [ ] **Step 7: Verify the production path — the step the reviewed plan never had**
 
 ```bash
-pnpm --filter @tripi/realtime build
+pnpm --filter @tether/realtime build
 head -3 services/realtime/dist/server.mjs
-pnpm --filter @tripi/realtime start
+pnpm --filter @tether/realtime start
 ```
 
-Expected from `head`: inlined source, **not** a line reading `import … from "@tripi/shared…"`. Make it a hard check rather than an eyeball:
+Expected from `head`: inlined source, **not** a line reading `import … from "@tether/shared…"`. Make it a hard check rather than an eyeball:
 
 ```bash
-grep -c '@tripi/shared' services/realtime/dist/server.mjs   # must print 0
+grep -c '@tether/shared' services/realtime/dist/server.mjs   # must print 0
 grep -oE '^import .* from "[^"]+"' services/realtime/dist/server.mjs
 ```
 
-Expected: `0`, then exactly two external imports — `@hocuspocus/server` and `pino`, the service's own declared dependencies. Anything matching `@tripi/shared` means `deps.alwaysBundle` is not covering that specifier; re-check the RegExp in Step 2. Note the artefact may still *run* with the import present (see Step 2's note), so the grep is the test, not the exit code.
+Expected: `0`, then exactly two external imports — `@hocuspocus/server` and `pino`, the service's own declared dependencies. Anything matching `@tether/shared` means `deps.alwaysBundle` is not covering that specifier; re-check the RegExp in Step 2. Note the artefact may still *run* with the import present (see Step 2's note), so the grep is the test, not the exit code.
 
 Expected from `start`: the same `realtime server listening` line, served from the built file. Stop with Ctrl+C.
 
@@ -1984,7 +1984,7 @@ describe('trip document shape', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: FAIL, `Failed to resolve import "./schema"`.
@@ -2030,7 +2030,7 @@ export function getActivities(doc: Y.Doc): Y.Map<Y.Map<unknown>> {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 ```bash
-pnpm --filter @tripi/shared test
+pnpm --filter @tether/shared test
 ```
 
 Expected: PASS, 15 tests total across both files.
@@ -2041,9 +2041,9 @@ These are browser-safe — the module imports only `type * as Y`, which is erase
 
 ```ts
 // Browser-safe barrel. Server-only modules are reached through their subpaths:
-//   @tripi/shared/env       Zod-validated process env
-//   @tripi/shared/db        Drizzle client
-//   @tripi/shared/db/schema Drizzle tables
+//   @tether/shared/env       Zod-validated process env
+//   @tether/shared/db        Drizzle client
+//   @tether/shared/db/schema Drizzle tables
 // biome.json enforces that restriction; see the boundaries table in the plan.
 export type { CoreEnv, RealtimeEnv, WebEnv } from './env'
 export {
@@ -2067,7 +2067,7 @@ The `NEXT_PUBLIC_HOCUSPOCUS_URL` fallback is **removed**. A silent default to lo
 'use client'
 
 import { HocuspocusProvider } from '@hocuspocus/provider'
-import { docNameForTrip } from '@tripi/shared'
+import { docNameForTrip } from '@tether/shared'
 import { useEffect, useState } from 'react'
 import * as Y from 'yjs'
 
@@ -2127,7 +2127,7 @@ export function useTripDoc(tripId: string): TripDocState {
 ```tsx
 'use client'
 
-import { getMeta } from '@tripi/shared'
+import { getMeta } from '@tether/shared'
 import { useTripDoc } from '@/lib/use-trip-doc'
 import { useEffect, useState } from 'react'
 
@@ -2206,7 +2206,7 @@ Open http://localhost:3000 in two browser windows side by side. Both should read
 The boundary lint from Task 1 catches the import; this catches the outcome.
 
 ```bash
-pnpm --filter @tripi/web build
+pnpm --filter @tether/web build
 grep -rl "postgres-js\|node:tls" apps/web/.next/static/chunks/ | head
 ```
 
@@ -2275,12 +2275,12 @@ export default defineConfig({
 })
 ```
 
-> Found during execution. `@tripi/web`'s test script is `vitest run --passWithNoTests`, whose default `include` picks up `tests/e2e/*.spec.ts`. Playwright's `test()` throws when called outside the Playwright runner, so root `pnpm test` fails with `Test Files 2 failed` and `Tests no tests` — a confusing error pointing at line 3 of a file that is not a unit test. The reviewed plan never surfaced this because it only ever ran `pnpm --filter @tripi/shared test`, never the root `pnpm test`, after this task added the specs.
+> Found during execution. `@tether/web`'s test script is `vitest run --passWithNoTests`, whose default `include` picks up `tests/e2e/*.spec.ts`. Playwright's `test()` throws when called outside the Playwright runner, so root `pnpm test` fails with `Test Files 2 failed` and `Tests no tests` — a confusing error pointing at line 3 of a file that is not a unit test. The reviewed plan never surfaced this because it only ever ran `pnpm --filter @tether/shared test`, never the root `pnpm test`, after this task added the specs.
 
 - [ ] **Step 3: Install the browser**
 
 ```bash
-pnpm --filter @tripi/web exec playwright install chromium --with-deps
+pnpm --filter @tether/web exec playwright install chromium --with-deps
 ```
 
 - [ ] **Step 4: Write `apps/web/tests/e2e/smoke.spec.ts`**
@@ -2291,7 +2291,7 @@ import { expect, test } from '@playwright/test'
 test('renders and reaches postgres through tRPC', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: 'Tripi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tether' })).toBeVisible()
   await expect(page.getByTestId('db-status')).toHaveText('database: up')
   await expect(page.getByTestId('place-count')).toContainText('places cached:')
 })
@@ -2350,7 +2350,7 @@ test('a value set in one tab appears in another through hocuspocus', async ({ br
 Make sure Docker is up and no stray dev server is running, then:
 
 ```bash
-pnpm --filter @tripi/web e2e
+pnpm --filter @tether/web e2e
 ```
 
 Expected: 3 passed.
@@ -2359,7 +2359,7 @@ Expected: 3 passed.
 
 Same specs, production artefacts. This is the first time the whole system runs from a build.
 
-`CI=1` makes Playwright start `pnpm start` (which builds first) instead of `pnpm dev`, and sets `reuseExistingServer: false` — so **stray dev servers from earlier steps will collide**. Free the ports first; an occupied :1234 surfaces only as `@tripi/realtime#start ... exited (1)` with no mention of the port.
+`CI=1` makes Playwright start `pnpm start` (which builds first) instead of `pnpm dev`, and sets `reuseExistingServer: false` — so **stray dev servers from earlier steps will collide**. Free the ports first; an occupied :1234 surfaces only as `@tether/realtime#start ... exited (1)` with no mention of the port.
 
 ```bash
 for p in 1234 3000; do
@@ -2367,7 +2367,7 @@ for p in 1234 3000; do
   [ -n "$PIDS" ] && kill -9 $PIDS
 done
 pnpm db:up
-CI=1 pnpm --filter @tripi/web e2e
+CI=1 pnpm --filter @tether/web e2e
 ```
 
 Expected: 3 passed, and the Playwright output shows `[WebServer] $ turbo run start` rather than `turbo run dev`.
@@ -2428,20 +2428,20 @@ jobs:
       postgres:
         image: postgres:17.11
         env:
-          POSTGRES_USER: tripi
-          POSTGRES_PASSWORD: tripi
-          POSTGRES_DB: tripi
+          POSTGRES_USER: tether
+          POSTGRES_PASSWORD: tether
+          POSTGRES_DB: tether
         # 5433 on the host to match docker-compose.yml, so DATABASE_URL is
         # byte-identical locally and in CI.
         ports: ['5433:5432']
         options: >-
-          --health-cmd "pg_isready -U tripi -d tripi"
+          --health-cmd "pg_isready -U tether -d tether"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://tripi:tripi@localhost:5433/tripi
+      DATABASE_URL: postgresql://tether:tether@localhost:5433/tether
       HOCUSPOCUS_PORT: '1234'
       HOCUSPOCUS_JWT_SECRET: ci-secret-that-is-at-least-thirty-two-chars
       NEXT_PUBLIC_APP_URL: http://localhost:3000
@@ -2481,8 +2481,8 @@ jobs:
       # later change cannot quietly undo them. Both are greps, not opinions.
       - name: Assert the realtime artefact is self-contained
         run: |
-          if grep -q '@tripi/shared' services/realtime/dist/server.mjs; then
-            echo "::error::dist/server.mjs still imports @tripi/shared — check deps.alwaysBundle in tsdown.config.ts"
+          if grep -q '@tether/shared' services/realtime/dist/server.mjs; then
+            echo "::error::dist/server.mjs still imports @tether/shared — check deps.alwaysBundle in tsdown.config.ts"
             exit 1
           fi
 
@@ -2494,7 +2494,7 @@ jobs:
           fi
 
       - name: Install Playwright browser
-        run: pnpm --filter @tripi/web exec playwright install chromium --with-deps
+        run: pnpm --filter @tether/web exec playwright install chromium --with-deps
 
       - name: End-to-end tests against the build
         run: pnpm e2e
@@ -2583,8 +2583,8 @@ Three units, not the eight in docs/architecture.md §2:
 Docker runs postgres + minio + mailpit only.
 
 ## Server/client boundary
-`@tripi/shared` (the barrel) is browser-safe. `@tripi/shared/env`, `@tripi/shared/db`, and
-`@tripi/shared/db/schema` are server-only and restricted by Biome `noRestrictedImports` to
+`@tether/shared` (the barrel) is browser-safe. `@tether/shared/env`, `@tether/shared/db`, and
+`@tether/shared/db/schema` are server-only and restricted by Biome `noRestrictedImports` to
 `apps/web/src/server/**`, `apps/web/src/app/api/**`, and `services/realtime/**`.
 Never re-export db or env from the barrel — that is what puts the Postgres driver in the
 browser bundle. Do not add the `server-only` package to `packages/shared`; it breaks the
@@ -2596,7 +2596,7 @@ realtime service, which is not a React Server environment.
   debug anything else. Machine state lives there, never in a plan.
 - `.env.local` lives at the repo root; `apps/web/.env.local` is a symlink to it, because Next
   only reads env files from the directory it was started in.
-- `services/realtime` is bundled with tsdown and `deps.alwaysBundle: ['@tripi/shared']` set in
+- `services/realtime` is bundled with tsdown and `deps.alwaysBundle: ['@tether/shared']` set in
   `tsdown.config.ts`. The equivalent CLI flag is silently a no-op — do not "simplify" it.
 - Drizzle table extras use the array callback form; the object form in docs/data-model.md is the old API.
 - Next 16: `params` is a Promise, and middleware would live in `proxy.ts`, not `middleware.ts`.
@@ -2624,7 +2624,7 @@ Monorepo, Docker, CI, vertical slice green from a production build (browser → 
 - [ ] **Step 4: Replace `README.md`**
 
 ```markdown
-# Tripi
+# Tether
 
 The trip-planning document that replaces the spreadsheet. Collaborative, AI-aware,
 and alive during the trip itself.
@@ -2687,15 +2687,15 @@ Phase 0 is complete when every line below has been run and produced the stated r
 **Local — production path**
 
 - [x] `pnpm build` succeeds from a clean `.turbo` (`rm -rf .turbo && pnpm build`).
-- [x] `pnpm --filter @tripi/realtime start` logs `realtime server listening` **from `dist/server.mjs`**, and `grep -c '@tripi/shared' services/realtime/dist/server.mjs` prints `0`.
+- [x] `pnpm --filter @tether/realtime start` logs `realtime server listening` **from `dist/server.mjs`**, and `grep -c '@tether/shared' services/realtime/dist/server.mjs` prints `0`.
 - [x] `pnpm start` serves the same working page from the built artefacts.
 - [x] `grep -rl "postgres-js\|node:tls" apps/web/.next/static/chunks/` returns nothing.
-- [x] `pnpm --filter @tripi/web build` succeeds with Postgres stopped (`force-dynamic` verified, Task 6 Step 7).
+- [x] `pnpm --filter @tether/web build` succeeds with Postgres stopped (`force-dynamic` verified, Task 6 Step 7).
 
 **Gates**
 
 - [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && CI=1 pnpm e2e` all pass locally.
-- [x] A `'use client'` file importing `@tripi/shared/db` fails `pnpm lint` (Task 4 Step 5).
+- [x] A `'use client'` file importing `@tether/shared/db` fails `pnpm lint` (Task 4 Step 5).
 - [x] CI is green on the `phase-0-foundation` branch, including the Build step, both bundle assertions, and e2e against the build. Requires an open PR — a branch push alone does not trigger this workflow (Task 11 Step 5).
 
 **Records**
@@ -2764,9 +2764,9 @@ Same scratch monorepo, `tsdown@0.22.14`, run from `services/realtime`:
 
 | Invocation | Result |
 |---|---|
-| `tsdown src/server.ts --format esm --platform node` | bundle emits `import … from "@tripi/shared"`; `node dist/server.mjs` → `ERR_MODULE_NOT_FOUND` |
-| `… --deps.always-bundle '@tripi/shared'` | **identical** — flag accepted, no error, no effect |
-| `tsdown.config.ts` with `deps: { alwaysBundle: ['@tripi/shared'] }` | shared source inlined into `dist/server.mjs`; runs correctly |
+| `tsdown src/server.ts --format esm --platform node` | bundle emits `import … from "@tether/shared"`; `node dist/server.mjs` → `ERR_MODULE_NOT_FOUND` |
+| `… --deps.always-bundle '@tether/shared'` | **identical** — flag accepted, no error, no effect |
+| `tsdown.config.ts` with `deps: { alwaysBundle: ['@tether/shared'] }` | shared source inlined into `dist/server.mjs`; runs correctly |
 
 Also: `--no-external` (the review's flag) is not in `tsdown --help` at all. And `noExternal` in the config is deprecated in 0.22 in favour of `deps.alwaysBundle` — the deprecation warning is emitted at build time.
 
@@ -2777,7 +2777,7 @@ Also: `--no-external` (the review's flag) is not in `tsdown --help` at all. And 
 ```
 apps/web/src/components/Bad.ts:1:20 lint/style/noRestrictedImports
   × Server-only: import from a server directory.
-  > 1 │ import { db } from '@tripi/shared/db'
+  > 1 │ import { db } from '@tether/shared/db'
 ```
 
 `apps/web/src/server/Ok.ts` with the identical import produced no diagnostic — the `overrides` block works as prescribed.

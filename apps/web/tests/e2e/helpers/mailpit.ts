@@ -41,7 +41,7 @@ export function firstLink(body: string): string {
 
 /** A unique address per test run, so tests never collide on the unique index. */
 export function uniqueEmail(prefix = 'user'): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@tripi.test`
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@tether.test`
 }
 
 export function uniqueUsername(prefix = 'u'): string {

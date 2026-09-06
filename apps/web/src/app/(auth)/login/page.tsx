@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   return (
     <AuthForm
-      title="Log in to Tripi"
+      title="Log in to Tether"
       submitLabel="Log in"
       error={error}
       pending={pending}

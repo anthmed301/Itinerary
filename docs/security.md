@@ -50,7 +50,7 @@ export const auth = betterAuth({
   rateLimit: { window: 60, max: 60 },     // built-in; ours adds tRPC layer too
   trustedOrigins: [env.PUBLIC_APP_URL],
   advanced: {
-    cookiePrefix: 'tripi',
+    cookiePrefix: 'tether',
     useSecureCookies: env.NODE_ENV === 'production',
   },
 })
@@ -150,7 +150,7 @@ This avoids leaking token-less unlisted URLs. The "Copy share link" button gener
 
 ## 5. Username security
 
-- Reserved list (case-insensitive): `admin`, `tripi`, `support`, `help`, `api`, `auth`, `login`, `signup`, `settings`, `explore`, `trips`, `profile`, `terms`, `privacy`, `home`, `app`, `www`, `mail`, `team`. Stored in `apps/web/src/server/auth/reserved-usernames.ts`.
+- Reserved list (case-insensitive): `admin`, `tether`, `support`, `help`, `api`, `auth`, `login`, `signup`, `settings`, `explore`, `trips`, `profile`, `terms`, `privacy`, `home`, `app`, `www`, `mail`, `team`. Stored in `apps/web/src/server/auth/reserved-usernames.ts`.
 - Username pattern: `/^[a-z0-9_]{3,32}$/i`. No leading/trailing underscores.
 - Stored canonicalized as `username_lower` (lowercase) for uniqueness; original case preserved for display.
 - Changing username: allowed once per 30 days (prevents impersonation churn). Old username goes into a 90-day reservation pool before being claimable again.
@@ -166,7 +166,7 @@ Categories:
 | Gemini API key | AWS Secrets Manager | App only (server-side AI calls) |
 | Tavily API key | AWS Secrets Manager | App only |
 | Foursquare API key | AWS Secrets Manager | App only |
-| Mapbox **public** token | env var, restricted to `tripi.app` domain | App + client |
+| Mapbox **public** token | env var, restricted to `tether.app` domain | App + client |
 | SES SMTP creds | AWS Secrets Manager | App only |
 | S3 access | IAM role (no static keys) | App's ECS task role |
 

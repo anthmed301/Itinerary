@@ -181,7 +181,7 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
 }
 ```
 
-Update `guard.test.ts` to drive `APP_STAGE` (`'local'` passes with both flags off; `'cloud'`, `'trusted'` and `'public'` each throw naming the offending variable). Add a DoD line: `APP_STAGE=cloud REQUIRE_EMAIL_VERIFICATION=false pnpm --filter @tripi/web start` refuses to serve `/api/auth/ok`.
+Update `guard.test.ts` to drive `APP_STAGE` (`'local'` passes with both flags off; `'cloud'`, `'trusted'` and `'public'` each throw naming the offending variable). Add a DoD line: `APP_STAGE=cloud REQUIRE_EMAIL_VERIFICATION=false pnpm --filter @tether/web start` refuses to serve `/api/auth/ok`.
 
 > The alternative — leaving the guard on `NODE_ENV` and setting `REQUIRE_EMAIL_VERIFICATION=true` for the CI e2e run — is not available: it would gate login on a click in Mailpit for every one of the eleven signups in the suite, which is the exact cost D1.5 exists to avoid.
 
@@ -189,7 +189,7 @@ Update `guard.test.ts` to drive `APP_STAGE` (`'local'` passes with both flags of
 
 Three independent gaps, all in the same blast radius.
 
-**(a) Turbo strict mode.** `pnpm exec turbo run build --dry=json` reports `envMode: strict`, and `@tripi/web#build` lists only `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_HOCUSPOCUS_URL`. Verified empirically in a scratch workspace on the same `turbo@2.10.12` (probe P3): a declared variable arrives, an undeclared one arrives as `<undef>`. Task 1 Step 7 explicitly instructs *not* to add the new variables to `build`. But Task 5 puts `const env = webEnv()` at module scope, and §3.2 proves `next build` evaluates that module — so `webEnv()` runs during the build with `BETTER_AUTH_SECRET`, `EMAIL_FROM` and `DATABASE_URL` all stripped, and throws `Invalid web environment`. This is L3 reproduced exactly.
+**(a) Turbo strict mode.** `pnpm exec turbo run build --dry=json` reports `envMode: strict`, and `@tether/web#build` lists only `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_HOCUSPOCUS_URL`. Verified empirically in a scratch workspace on the same `turbo@2.10.12` (probe P3): a declared variable arrives, an undeclared one arrives as `<undef>`. Task 1 Step 7 explicitly instructs *not* to add the new variables to `build`. But Task 5 puts `const env = webEnv()` at module scope, and §3.2 proves `next build` evaluates that module — so `webEnv()` runs during the build with `BETTER_AUTH_SECRET`, `EMAIL_FROM` and `DATABASE_URL` all stripped, and throws `Invalid web environment`. This is L3 reproduced exactly.
 
 **(b) CI has no secret.** `.github/workflows/ci.yml`'s `env:` block sets five variables; `BETTER_AUTH_SECRET` (`min(32)`, no default) and `EMAIL_FROM` (`min(3)`, no default) are not among them. The Build step fails.
 
@@ -223,7 +223,7 @@ Three independent gaps, all in the same blast radius.
 ```yaml
       APP_STAGE: local
       BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-thirty-two-chars
-      EMAIL_FROM: Tripi <no-reply@tripi.local>
+      EMAIL_FROM: Tether <no-reply@tether.local>
       REQUIRE_EMAIL_VERIFICATION: 'false'
       RATE_LIMIT_ENABLED: 'true'
 ```
@@ -329,19 +329,19 @@ test.describe('throttling', () => {
 `advanced.useSecureCookies: env.NODE_ENV === 'production'` is true under `next start`. Better Auth then renames the cookie. Verified (probe P7):
 
 ```
-useSecureCookies:false → tripi.session_token=…;          Path=/; HttpOnly; SameSite=Lax
-useSecureCookies:true  → __Secure-tripi.session_token=…; Path=/; HttpOnly; Secure; SameSite=Lax
+useSecureCookies:false → tether.session_token=…;          Path=/; HttpOnly; SameSite=Lax
+useSecureCookies:true  → __Secure-tether.session_token=…; Path=/; HttpOnly; Secure; SameSite=Lax
 ```
 
-`cookies.find((c) => c.name.startsWith('tripi'))` returns `undefined` and the assertion `session … toBeTruthy()` fails in exactly the mode the DoD requires.
+`cookies.find((c) => c.name.startsWith('tether'))` returns `undefined` and the assertion `session … toBeTruthy()` fails in exactly the mode the DoD requires.
 
 I checked whether this kills the whole authenticated suite in CI mode, and it does not: Chromium **does** store a `__Secure-` cookie over `http://localhost` (probe P7b) — localhost is a trustworthy origin — so only this one test breaks.
 
 **Patch.** Match the suffix, and assert `Secure` conditionally so the test proves the real posture in both modes:
 
 ```ts
-  const session = cookies.find((c) => c.name.endsWith('tripi.session_token'))
-  expect(session, 'a tripi session cookie should be set').toBeTruthy()
+  const session = cookies.find((c) => c.name.endsWith('tether.session_token'))
+  expect(session, 'a tether session cookie should be set').toBeTruthy()
   expect(session?.httpOnly).toBe(true)
   expect(session?.sameSite).toBe('Lax')
   // useSecureCookies follows NODE_ENV; `next start` (CI=1) sets it, `next dev` does not.
@@ -356,7 +356,7 @@ I checked whether this kills the whole authenticated suite in CI mode, and it do
 if (config.isDev && typeof opts.error.stack === "string") shape.data.stack = opts.error.stack;
 ```
 
-`isDev` defaults to `NODE_ENV !== 'production'`, and the plan's `errorFormatter` returns `shape` untouched outside production. So under Task 12 **Step 5** (`pnpm --filter @tripi/web e2e` against `pnpm dev`) the response body carries a stack full of `/Users/antoshkah/…` paths and `expect(body).not.toContain('/Users/')` fails. Step 5's "Expected: 17 passed" cannot happen.
+`isDev` defaults to `NODE_ENV !== 'production'`, and the plan's `errorFormatter` returns `shape` untouched outside production. So under Task 12 **Step 5** (`pnpm --filter @tether/web e2e` against `pnpm dev`) the response body carries a stack full of `/Users/antoshkah/…` paths and `expect(body).not.toContain('/Users/')` fails. Step 5's "Expected: 17 passed" cannot happen.
 
 Separately, the request the test makes is unauthenticated, so it produces `UNAUTHORIZED` — a clean 401 — not the "forced server error" spec §5 A10 promises to verify.
 
@@ -505,14 +505,14 @@ While there: `PRD.md` §4.1 lists self-serve account deletion as v1 scope, and s
 | # | Where | Finding | Fix |
 |---|---|---|---|
 | M1 | Task 3 schema | `getAuthTables()` reports `account.indexes: [{ fields: ['issuer','accountId'], unique: true }]`. The hand-written table has only `account_user_id_idx`. The schema is described as coming from that dump; this row was dropped | Add `uniqueIndex('account_issuer_account_id_idx').on(t.issuer, t.accountId)` |
-| M2 | Tasks 4–5 | Web unit-test counts are wrong. Actual: 6 after templates, 9 after log, 13 after guard. Plan says 7, 10, 11 — and 11 is lower than its own preceding 10 | Correct to 6 / 9 / 13. (The `@tripi/shared` counts, 20 and 32, are **right** — verified: 15 tests pass today) |
+| M2 | Tasks 4–5 | Web unit-test counts are wrong. Actual: 6 after templates, 9 after log, 13 after guard. Plan says 7, 10, 11 — and 11 is lower than its own preceding 10 | Correct to 6 / 9 / 13. (The `@tether/shared` counts, 20 and 32, are **right** — verified: 15 tests pass today) |
 | M3 | Task 13 Step 2 | "Expected: `No known vulnerabilities found`" is not what this repo prints. Actual today: `1 vulnerabilities found / Severity: 1 moderate`, exit 0 — esbuild GHSA-67mh-4wv8-2f99 via `drizzle-kit > @esbuild-kit/*` | State the real expected output, and note that `--audit-level=high` intentionally passes over it so nobody "resolves" a moderate transitive dev advisory that has no fix path |
 | M4 | Task 5 / Task 9 | A taken username and an invalid username both surface as `422 {"code":"FAILED_TO_CREATE_USER"}` — the before-hook's `Invalid username: …` message is swallowed. Verified. The e2e passes because it only asserts `form-error` is visible | Check availability server-side in `signUp` before calling Better Auth, or map the 422 to "That username is taken" in the signup page. Do not leave "Could not create the account." as the only feedback for the most common failure in the flow |
 | M5 | Task 5 | Signup leaks membership: a duplicate email returns `422 USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`. Verified. D1.9 closes the reset oracle but signup reopens it | Either accept it explicitly in spec §5 A06 alongside the username oracle (it is Better Auth's default and hard to avoid without hurting UX), or note it in "what this does not cover" |
 | M6 | Task 7 | `getOrCreateProfile` issues an INSERT on every profile *read*, and returns the row from before that insert. Correct, but a write on a query path | Insert first, then select; or select, and only insert when the join came back null |
 | M7 | Task 5 | `drizzleAdapter(db(), { provider: 'pg' })` works only because `createDb` passes `{ schema }`, populating `db._.fullSchema`. Verified both ways: the adapter throws `Schema not found` without it, and works when `schema` is passed explicitly even with an empty `_.fullSchema` | Pass it: `drizzleAdapter(db(), { provider: 'pg', schema })`. One import, removes a silent coupling to how the client happens to be constructed |
 | M8 | Task 1 Step 6 | Says "Replacement, not append — the Phase 0 lesson about duplicate secret lines", then the command is `cat >> .env.local` followed by a `sed`. It works, but the comment describes something the code does not do | Say what it does: append the block once, then substitute the placeholder |
-| M9 | Throughout | The code blocks are not Biome-ordered (`@tripi/shared/db` before `@tripi/shared` in Task 7 Step 2; `Suspense, type FormEvent, useState` in Task 10 Step 2). `pnpm lint` is in the DoD and `biome check` fails on unsorted imports | Add "run `pnpm format` before each commit" to the task template, or fix the blocks |
+| M9 | Throughout | The code blocks are not Biome-ordered (`@tether/shared/db` before `@tether/shared` in Task 7 Step 2; `Suspense, type FormEvent, useState` in Task 10 Step 2). `pnpm lint` is in the DoD and `biome check` fails on unsorted imports | Add "run `pnpm format` before each commit" to the task template, or fix the blocks |
 | M10 | Task 12 Step 4b | Uses `await import('./helpers/mailpit')` inside a test for helpers the same file already imports statically at the top | Add the three names to the top-level import |
 | M11 | Task 12 | The XSS test is close to vacuous: `name` is only ever rendered into an `<input value>`, never as text. It would pass against an app with no escaping at all | Render the display name as text somewhere on `/profile` (the header is the natural place) and assert on it, or move the assertion to the email body where the payload genuinely reaches an HTML renderer |
 | M12 | Task 5 | `x-forwarded-for` is honoured with no `trustedProxies` configured (verified). Fine on localhost; a rate-limit bypass the moment the app is reachable, and behind a multi-hop proxy `getIPFromHeader` returns `null` and collapses all users into one bucket | Deviations row + a Stage-2 checklist item to set `advanced.ipAddress.trustedProxies` |
@@ -592,7 +592,7 @@ HANDLER RUN:  NODE_ENV= production NEXT_PHASE= <undef>
 ```bash
 pnpm exec turbo run build --dry=json   # in the repo
 # envMode: strict
-# @tripi/web#build specified.env: ["NEXT_PUBLIC_APP_URL","NEXT_PUBLIC_HOCUSPOCUS_URL"]
+# @tether/web#build specified.env: ["NEXT_PUBLIC_APP_URL","NEXT_PUBLIC_HOCUSPOCUS_URL"]
 ```
 
 Scratch workspace on the same `turbo@2.10.12`, task `env: ["DECLARED_VAR"]`:
@@ -607,7 +607,7 @@ DECLARED_VAR=yes UNDECLARED_VAR=leaked npx turbo run build
 `nodemailer@9.0.5` + `@types/nodemailer@8.0.1` in a route handler, `next build && next start`, one `sendMail` to the running Mailpit:
 
 ```
-{"ok":true,"id":"<d6e2562a-…@tripi.local>"}
+{"ok":true,"id":"<d6e2562a-…@tether.local>"}
 found 1
 Subject: Probe subject
 Text: 'Reset your password:\r\nhttp://localhost:3000/api/auth/reset-password/AVERYLONGTOKEN0123456789abcdefghijklmnop?callbackURL=%2Freset-password\r\n\r\nbye'
@@ -648,14 +648,14 @@ REQUEST BODY: xff=203.0.113.42
 ### P7 — cookie attributes, and `__Secure-` over http://localhost
 
 ```
-useSecureCookies:false → tripi.session_token=…;          Max-Age=2592000; Path=/; HttpOnly; SameSite=Lax
-useSecureCookies:true  → __Secure-tripi.session_token=…; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax
+useSecureCookies:false → tether.session_token=…;          Max-Age=2592000; Path=/; HttpOnly; SameSite=Lax
+useSecureCookies:true  → __Secure-tether.session_token=…; Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax
 ```
 
 **P7b — Chromium 1.62.1 against a plain-http localhost server that sets both:**
 ```json
-[{"name":"__Secure-tripi.session_token","domain":"localhost","httpOnly":true,"secure":true,"sameSite":"Lax"},
- {"name":"tripi.plain","domain":"localhost","httpOnly":true,"secure":false,"sameSite":"Lax"}]
+[{"name":"__Secure-tether.session_token","domain":"localhost","httpOnly":true,"secure":true,"sameSite":"Lax"},
+ {"name":"tether.plain","domain":"localhost","httpOnly":true,"secure":false,"sameSite":"Lax"}]
 ```
 Both are stored — so §4.1 breaks one assertion, not the suite.
 

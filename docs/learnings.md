@@ -166,3 +166,13 @@ The rate-limit collision would not have surfaced as "429 Too Many Requests". Bec
 
 **Do:** when a security decision hides information, ask what a failure downstream of it will look like. Deliberate opacity is right for attackers and expensive for debugging; note it where the opacity is introduced.
 
+### L22 — A probe on a minimal reproduction can miss what the real app does
+
+The Phase 1 review probed the Content-Security-Policy against a purpose-built minimal Next app and concluded, correctly for that app, that development needed no `'unsafe-eval'`. The real app throws a console error on every page: React's development build uses `eval()` to reconstruct callstacks for debugging.
+
+Nobody caught it in 20 automated tests either — Playwright asserted the header's *presence*, never that the browser console was clean.
+
+**Found out:** a human opened the app and looked at the console.
+
+**Do:** two things. Probe the real thing where you can, and when a minimal reproduction is genuinely necessary, name what it left out. And treat "a person used it" as a distinct verification tier — automated tests assert what you thought to assert, and a console error is exactly the class of defect they step over. This is the counterweight to L19: running the request is necessary, but running *your* request is not the same as running the app.
+

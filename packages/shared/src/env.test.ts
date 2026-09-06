@@ -3,6 +3,7 @@ import { parseCoreEnv, parseRealtimeEnv, parseWebEnv } from './env'
 
 const core = {
   NODE_ENV: 'development',
+  APP_STAGE: 'local',
   DATABASE_URL: 'postgresql://tripi:tripi@localhost:5433/tripi',
 }
 
@@ -10,6 +11,8 @@ const web = {
   ...core,
   NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
   NEXT_PUBLIC_HOCUSPOCUS_URL: 'ws://localhost:1234',
+  BETTER_AUTH_SECRET: 'b'.repeat(32),
+  EMAIL_FROM: 'Tripi <no-reply@tripi.local>',
 }
 
 const realtime = {
@@ -74,5 +77,48 @@ describe('realtime env', () => {
   // The realtime server never renders a page; requiring the app URL would block boot.
   it('does not require the public app URL', () => {
     expect(() => parseRealtimeEnv(realtime)).not.toThrow()
+  })
+})
+
+describe('web env — auth and email', () => {
+  it('requires a Better Auth secret of at least 32 characters', () => {
+    expect(() => parseWebEnv({ ...web, BETTER_AUTH_SECRET: 'short' })).toThrow(/BETTER_AUTH_SECRET/)
+  })
+
+  it('defaults SMTP to the local Mailpit container', () => {
+    const e = parseWebEnv(web)
+    expect(e.SMTP_HOST).toBe('localhost')
+    expect(e.SMTP_PORT).toBe(1025)
+  })
+
+  it('coerces REQUIRE_EMAIL_VERIFICATION from a string and defaults it to false', () => {
+    expect(parseWebEnv(web).REQUIRE_EMAIL_VERIFICATION).toBe(false)
+    expect(
+      parseWebEnv({ ...web, REQUIRE_EMAIL_VERIFICATION: 'true' }).REQUIRE_EMAIL_VERIFICATION,
+    ).toBe(true)
+  })
+
+  // D1.8: better-auth's own default is `enabled ?? isProduction` — off in dev.
+  it('defaults RATE_LIMIT_ENABLED to true', () => {
+    expect(parseWebEnv(web).RATE_LIMIT_ENABLED).toBe(true)
+  })
+
+  it('rejects a non-boolean string for a boolean flag', () => {
+    expect(() => parseWebEnv({ ...web, RATE_LIMIT_ENABLED: 'yes' })).toThrow(/RATE_LIMIT_ENABLED/)
+  })
+})
+
+describe('core env — APP_STAGE', () => {
+  // Review §3.2: the security posture guard keys on this, not NODE_ENV.
+  it('defaults to local', () => {
+    const { APP_STAGE, ...withoutStage } = core
+    expect(parseCoreEnv(withoutStage).APP_STAGE).toBe('local')
+  })
+
+  it('accepts the four PRD §7b stages and rejects anything else', () => {
+    for (const stage of ['local', 'cloud', 'trusted', 'public']) {
+      expect(parseCoreEnv({ ...core, APP_STAGE: stage }).APP_STAGE).toBe(stage)
+    }
+    expect(() => parseCoreEnv({ ...core, APP_STAGE: 'staging' })).toThrow(/APP_STAGE/)
   })
 })

@@ -16,6 +16,8 @@ Trip-planning web app. Replaces Google-Sheets planning with a focused, AI-aware 
 - `docs/security.md` — auth + authz + secrets + privacy.
 - `docs/ops.md` — local dev, CI/CD, deploy, observability, costs.
 - `docs/competitive-analysis.md` — market gaps and positioning.
+- `docs/build-log.md` — what shipped per phase, in plain language. **Append when a phase's Definition of Done passes.**
+- `docs/learnings.md` — transferable lessons. **Append when something surprises us.** Inclusion test: would knowing it a day earlier have saved time, and does it still apply next phase?
 
 ## Working agreements (project-specific)
 - v1 is **web-only**. iOS is post-v1.

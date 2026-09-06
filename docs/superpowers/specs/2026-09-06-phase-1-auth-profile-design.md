@@ -107,6 +107,8 @@ Being precise, because "no room for any OWASP vulnerability" is not a claim any 
 - **No penetration testing.** These controls are verified by our own tests, which encode our own assumptions. That is strictly weaker than an adversarial review.
 - **Trip-level authorization is Phase 4.** A01 here covers only "a user can act on their own account". The `trip_member` join that protects trip data does not exist yet.
 - **Rate limits are per-instance and in-memory.** They become bypassable the moment there is more than one instance (multi-instance is a v2 backlog item).
+- **`x-forwarded-for` is trusted without validation.** Better Auth's `getIP` reads the header with no `trustedProxies` configured, so a client can choose its own rate-limit bucket. Harmless on localhost; a straightforward bypass the moment the app is reachable. **Stage 2 must set `advanced.ipAddress.trustedProxies`.** Note also that behind a multi-hop proxy the header carries several entries and Better Auth returns `null`, collapsing every user into one global bucket.
+- **Signup still leaks membership.** A duplicate email returns `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`. D1.9 closes the oracle on the reset path, but signup reopens it. Accepted alongside the username oracle D1.1 already concedes; avoiding it costs real signup UX.
 
 ---
 

@@ -13,6 +13,11 @@ export default async function HomePage() {
       <header className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold">Tripi</h1>
         <p className="text-sm text-neutral-500">Phase 0 foundation</p>
+        <p className="text-sm">
+          <a className="underline" href="/profile" data-testid="profile-link">
+            Your profile
+          </a>
+        </p>
       </header>
 
       <section className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">

@@ -29,12 +29,32 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      # Review §3.3: the e2e suite asserts on real delivered mail. Without this
+      # service every waitForEmail() times out and six tests can never be green.
+      mailpit:
+        image: axllent/mailpit:v1.31
+        ports: ['1025:1025', '8025:8025']
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       DATABASE_URL: postgresql://tripi:tripi@localhost:5433/tripi
       HOCUSPOCUS_PORT: '1234'
       HOCUSPOCUS_JWT_SECRET: ci-secret-that-is-at-least-thirty-two-chars
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_HOCUSPOCUS_URL: ws://localhost:1234
+      # PRD §7b stage. Security posture keys on this, not NODE_ENV — `next
+      # build` and `next start` both run NODE_ENV=production here.
+      APP_STAGE: local
+      BETTER_AUTH_SECRET: ci-better-auth-secret-at-least-thirty-two-chars
+      SMTP_HOST: localhost
+      SMTP_PORT: '1025'
+      EMAIL_FROM: Tripi <no-reply@tripi.local>
+      REQUIRE_EMAIL_VERIFICATION: 'false'
+      RATE_LIMIT_ENABLED: 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +68,14 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # A03 (Software Supply Chain Failures). Pinned versions and a committed
+      # lockfile stop drift; this is how we learn a pin became vulnerable.
+      # Today this repo reports 1 moderate (esbuild GHSA-67mh-4wv8-2f99, via
+      # drizzle-kit > @esbuild-kit/*, no fix path) and passes at --audit-level=high.
+      # Do NOT lower the threshold to make a real high-severity finding pass.
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
 
       - name: Apply migrations
         run: pnpm db:migrate

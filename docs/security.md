@@ -59,7 +59,7 @@ export const auth = betterAuth({
 ### 2.1 Password requirements
 - ≥ 10 characters.
 - Score ≥ 3 from zxcvbn (client-side). Server enforces minimum length only; we don't reject on entropy because it leads to bad UX. Strong-meter is informational.
-- Better Auth uses bcrypt under the hood (cost factor 11 default — verify and bump to 12 if Apple silicon makes it cheap).
+- Better Auth hashes with **scrypt** via `node:crypto` (`@better-auth/utils/password`), not bcrypt. Verified against `better-auth@1.7.1` on 2026-09-06; an earlier draft of this doc said bcrypt and advised tuning a cost factor that does not exist. scrypt parameters are the library's defaults; revisit only with a benchmark, not by analogy to bcrypt.
 
 ### 2.2 Email verification
 - Required before any social action (publish, comment, follow).
